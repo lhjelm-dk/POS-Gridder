@@ -1,0 +1,11 @@
+# Shared with HCWC Builder, E-POS and SCOPE-HC so the tools read as one system.
+[theme]
+primaryColor = "#FF6B6B"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F1E6"
+textColor = "#1E1B16"
+font = "sans serif"
+
+[server]
+# Grids, contour sets and HCWC tables are small; 200 MB is Streamlit's default and is kept.
+maxUploadSize = 200

@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pos-gridder"
+version = "0.0.1"
+description = "Surfaces, contours and gridded chance of success for prospect mapping"
+requires-python = ">=3.11"
+license = "MIT"
+# requirements.txt is the canonical list; these floors are kept identical to it and
+# tests/test_packaging.py checks that they are.
+dependencies = [
+    "numpy>=2.1",
+    "pandas>=2.2",
+    "scipy>=1.14",
+    "plotly>=5.24",
+    "streamlit>=1.56",
+    "xtgeo>=4.0",
+    "contourpy>=1.3",
+    "shapely>=2.0",
+    "geopandas>=1.0",
+    "pyogrio>=0.9",
+    "pyproj>=3.6",
+    "verde>=1.8",
+    "pykrige>=1.7",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "render: renders app.py through AppTest (slow; run on main, not on pull requests)",
+]
+filterwarnings = [
+    "error::RuntimeWarning",
+    "ignore::DeprecationWarning",
+    "ignore:.*deprecated.*:UserWarning",
+    # paramiko (pulled in by an xtgeo dependency) warns about moved ciphers on import.
+    "ignore:.*has been moved to cryptography.*",
+]
+
+[tool.setuptools.packages.find]
+include = ["posgridder*"]

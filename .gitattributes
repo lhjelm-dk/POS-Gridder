@@ -1,0 +1,17 @@
+# Normalise line endings: LF in the repository, native in the working tree.
+# Development is on Windows; Streamlit Cloud runs Linux.
+* text=auto eol=lf
+
+# Binary assets - never touch these.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.xlsx binary
+*.xlsm binary
+*.pdf binary
+*.dat text
+*.zmap text
+*.gri binary
+*.tif binary
+*.gpkg binary

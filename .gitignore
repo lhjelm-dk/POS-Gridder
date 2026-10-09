@@ -1,0 +1,29 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+.DS_Store
+*.egg-info/
+build/
+dist/
+pytest*.xml
+
+# Local editor/agent tooling; launch.json carries absolute paths to this machine.
+.claude/
+
+# Source material and data that never leave this machine. The GEUS test grid lives in
+# data/private/; tests that need it skip when it is absent, so a clone is a working clone.
+/_private/
+data/private/
+
+# Loose documents at the root.
+/*.xlsx
+/*.pdf
+/*.docx
+/*.pptx
+/~$*
+
+# Working conventions for the assistant: a note to one reader, not part of the repository.
+CLAUDE.md
