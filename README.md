@@ -1,12 +1,20 @@
 # POS-Gridder
 
-Surfaces, contours and gridded chance of success for prospect mapping. A Streamlit application
-with Petrel- and QGIS-style tools: surface import and arithmetic, depth conversion, contouring
-and contour editing, closure and GRV, POS attributes on contours, gridding of POS (including a
-convergent interpolation), and import of contact distributions from HCWC Builder.
+Surfaces, contours and spatial chance of success for prospect evaluation. A Streamlit
+application for the HCWC/GRV/POS workflow: surface import, depth conversion and arithmetic,
+closure and spill interpretation, area–depth and GRV, contact distributions from HCWC Builder,
+POS mapped as a function of depth, and area/GRV across the contact percentiles. Every layer
+records how it was made and can be recomputed from the imported files.
 
-**Status:** Phase 0 of the plan in [`docs/PLAN.md`](docs/PLAN.md): surface import, layer list,
-map view and export. The other tools follow phase by phase.
+**Status:** Phase 1 of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
+[`docs/FEASIBILITY.md`](docs/FEASIBILITY.md)):
+- import with a declared domain and sign;
+- immutable layers with provenance, version history and stale flags;
+- depth conversion (constant velocity, velocity surface, V0 + kZ);
+- domain-checked arithmetic and explicit resampling;
+- project save/load with a replay check.
+
+Closure and volumes come next.
 
 ## Run
 
@@ -30,10 +38,9 @@ subset CI runs on pull requests.
 | Format | Read | Write | Through |
 |---|---|---|---|
 | ZMAP+ ASCII | ✓ | ✓ | own reader (honours the header's null value) |
-| IRAP classic ASCII | ✓ | ✓ | xtgeo |
-| IRAP binary | ✓ | ✓ | xtgeo (float32 values) |
 
-CPS-3, GeoTIFF and XYZ points are planned for Phase 1.
+v1 keeps to ZMAP+ for grids (decision D8). The IRAP bridge from Phase 0 is in `archive/`.
+Contour import (GeoPackage, Shapefile, GeoJSON, ASCII) arrives with the contour phase.
 
 ## Conventions
 
@@ -50,7 +57,9 @@ CPS-3, GeoTIFF and XYZ points are planned for Phase 1.
 | `posgridder/io/` | file formats and, later, the exchange files for the companion apps |
 | `posgridder/plotting/` | map figures |
 | `posgridder/ui/` | the sidebar and one module per tab |
-| `docs/` | the development plan |
+| `docs/` | the development plan and the feasibility results |
+| `feasibility/` | the feasibility scripts and the line-selection prototype |
+| `archive/` | code moved out of the package (the xtgeo/IRAP bridge) |
 | `tests/` | the suite |
 
 ## Companions

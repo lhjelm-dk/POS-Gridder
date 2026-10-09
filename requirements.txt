@@ -9,15 +9,7 @@ pandas>=2.2
 scipy>=1.14
 plotly>=5.24
 streamlit>=1.56
-# Surface I/O for IRAP and the other Petrel-family formats. ZMAP+ is read by our own reader,
-# because xtgeo does not honour a ZMAP+ header's null value other than its own 1E+33.
-xtgeo>=4.0
-# Contouring, vector geometry and its files (GeoPackage, Shapefile, GeoJSON).
+# Contouring and polygon geometry (closure, area-depth). Vector file I/O (geopandas,
+# pyogrio) joins in the contour phase; see docs/PLAN.md section 6.1.
 contourpy>=1.3
 shapely>=2.0
-geopandas>=1.0
-pyogrio>=0.9
-pyproj>=3.6
-# Gridding: spline (verde) and ordinary kriging (pykrige); the rest is scipy and our own code.
-verde>=1.8
-pykrige>=1.7

@@ -21,13 +21,28 @@ from __future__ import annotations
 
 import io
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
-from posgridder.core.model import Surface
-
 DEFAULT_NULL = 1.0e30
+
+
+@dataclass(frozen=True)
+class RawGrid:
+    """A grid as a file holds it, before the project gives it a domain and a derivation."""
+    name: str
+    xori: float
+    yori: float
+    xinc: float
+    yinc: float
+    values: np.ma.MaskedArray          # (nrow, ncol), row 0 in the south
+    crs: str | None = None
+
+    @property
+    def geometry(self) -> tuple[float, float, float, float]:
+        return (self.xori, self.yori, self.xinc, self.yinc)
 
 
 def _text(source: str | Path | bytes | io.IOBase) -> str:
@@ -43,7 +58,7 @@ def _fields(line: str) -> list[str]:
     return [f.strip() for f in line.split(",")]
 
 
-def read_zmap(source: str | Path | bytes | io.IOBase, name: str | None = None) -> Surface:
+def read_zmap(source: str | Path | bytes | io.IOBase, name: str | None = None) -> RawGrid:
     """Read a ZMAP+ grid. ``source`` is a path, the file's bytes, or an open file."""
     lines = _text(source).splitlines()
 
@@ -105,7 +120,7 @@ def read_zmap(source: str | Path | bytes | io.IOBase, name: str | None = None) -
     grid = flat.reshape(ncol, nrow).T[::-1, :]
     mask = np.isclose(grid, null_value, rtol=1e-6) | ~np.isfinite(grid)
 
-    return Surface(
+    return RawGrid(
         name=name or grid_name or "zmap grid",
         xori=xmin,
         yori=ymin,
@@ -113,14 +128,20 @@ def read_zmap(source: str | Path | bytes | io.IOBase, name: str | None = None) -
         yinc=(ymax - ymin) / (nrow - 1),
         values=np.ma.MaskedArray(grid, mask=mask),
         crs=crs,
-        provenance="ZMAP+ import",
     )
 
 
-def write_zmap(surface: Surface, target: str | Path | None = None, *,
+def write_zmap(surface, target: str | Path | None = None, *,
                nodes_per_line: int = 5, null_value: float = DEFAULT_NULL) -> str:
-    """Write ``surface`` as ZMAP+ and return the text; also saved to ``target`` if given."""
+    """Write ``surface`` as ZMAP+ and return the text; also saved to ``target`` if given.
+
+    ``surface`` is anything with the grid fields: a :class:`~posgridder.core.model.Surface` or a
+    :class:`RawGrid`.
+    """
     width, decimals = 15, 7
+    nrow, ncol = surface.values.shape
+    xmax = surface.xori + (ncol - 1) * surface.xinc
+    ymax = surface.yori + (nrow - 1) * surface.yinc
     name = re.sub(r"[,@!]", "_", surface.name)
     out = ["!", f"!     GRID NAME : {name}", "!     WRITTEN BY POS-Gridder"]
     if surface.crs:
@@ -129,13 +150,13 @@ def write_zmap(surface: Surface, target: str | Path | None = None, *,
         "!",
         f"@{name} HEADER, GRID, {nodes_per_line}",
         f" {width}, {null_value:.7E}, , {decimals}, 1",
-        f" {surface.nrow}, {surface.ncol}, {surface.xori:.4f}, {surface.xmax:.4f}, "
-        f"{surface.yori:.4f}, {surface.ymax:.4f}",
+        f" {nrow}, {ncol}, {surface.xori:.4f}, {xmax:.4f}, "
+        f"{surface.yori:.4f}, {ymax:.4f}",
         f" 0.0000, {surface.xinc:.4f}, {surface.yinc:.4f}",
         "@",
     ]
     values = surface.values.filled(null_value)[::-1, :]      # row 0 back to the north
-    for j in range(surface.ncol):
+    for j in range(ncol):
         column = values[:, j]
         for k in range(0, column.size, nodes_per_line):
             out.append("".join(f"{v:{width}.{decimals}E}" for v in column[k:k + nodes_per_line]))
