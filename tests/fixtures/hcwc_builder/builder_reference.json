@@ -1,0 +1,20 @@
+{
+  "source": "HCWC Builder example_prospect_spill.hcwc.json (resolved limit set), engine.run defaults",
+  "note": "the file's resolved block is named 'Tofte North' while its inputs say 'Vestre Low'",
+  "P_G_from_inputs": 0.4082400000000001,
+  "n_trials": 10000,
+  "h_min_m": 120.0,
+  "F_h_min": 0.8891,
+  "apex_median_m": 2049.988122582293,
+  "apex_p1_p99_m": [
+    2048.99535218101,
+    2050.9809886897942
+  ],
+  "contact_m_conditioned_exceedance_P10_P50_P90": [
+    2266.2930283582314,
+    2217.246840536274,
+    2182.4848860786087
+  ],
+  "conditioned_provenance": "GEOLOGICAL contact distribution. Exceedance percentiles (P100 = shallowest) from 8,891 trials; tails: truncate at P0.5/P99.5.",
+  "unconditioned_provenance": "UNCONDITIONED contact distribution. Exceedance percentiles (P100 = shallowest) from 10,000 trials; tails: truncate at P0.5/P99.5."
+}

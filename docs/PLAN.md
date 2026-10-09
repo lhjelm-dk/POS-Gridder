@@ -1,6 +1,6 @@
 # POS-Gridder — Revised v1 plan (critical review of draft 3)
 
-*Draft 4, 2026-10-09. A critical review of draft 3 (archived as `docs/archive/PLAN_draft3.md`),
+*Draft 4, 2026-10-09; feasibility results folded in (see `docs/FEASIBILITY.md`). A critical review of draft 3 (archived as `docs/archive/PLAN_draft3.md`),
 with the user's decisions D1–D9 recorded in §0 and §9. No implementation has started from this
 plan.*
 
@@ -408,11 +408,13 @@ decision (§9) is required first.
 ### 5.4 Contours → surface (reconciliation) — *definable now; default chosen by benchmark*
 
 - **Inputs:**
-  - the contour set (with vertices densified to about half a cell);
+  - the contour set, with vertices resampled to about one cell spacing (F4: denser vertices degrade a
+    local thin-plate fit);
   - optional crest points;
   - the target grid geometry;
-  - the method: linear TIN (`scipy` Delaunay) or thin-plate spline (`scipy.interpolate.RBFInterpolator`
-    with local neighbours **[Verify]** speed);
+  - the method: linear TIN (`scipy` Delaunay; the working default after F4) or thin-plate spline
+    (`scipy.interpolate.RBFInterpolator`, local, with at least 150 neighbours). F4 measured 1–3 s
+    for TIN and about 22 s for thin-plate on 63–131 k points;
   - an extrapolation limit (distance to data).
 - **Output:** a new depth surface with provenance. The source surface, if any, is unchanged.
 - **Checks reported:**
@@ -529,7 +531,8 @@ decision (§9) is required first.
   | Unconditioned | Only if h_min is given: `E_min` is derived by renormalising the part deeper than apex + h_min | Yes |
 
 - **Inputs:**
-  - P(G): from `.hcwc.json` (product of `play × cond`) on the geological basis only, or typed.
+  - P(G): from `.hcwc.json` **`inputs`** (product of `play_* × cond_*`; never from `resolved`,
+    which F5 found can be stale) on the geological basis only, or typed.
   - F(h_min): typed, or read from a Builder file when one carries it (D2).
   - h_min, needed for the band.
   - The apex, for the band and for the anchoring check.
@@ -730,7 +733,7 @@ overshoots. The benchmark report is kept in `docs/` and re-run in CI.
 
 | Phase | Objective | Deliverables | Depends on | Acceptance | Main risks | Deferred |
 |---|---|---|---|---|---|---|
-| **F. Feasibility** (short) | Remove technical unknowns | Clean-venv Windows install of the §6.1 list; Plotly line-selection prototype; contourpy → shapely area convergence on the paraboloid (sets the T5 bound); RBF/TIN timing on 20 k → 50 k; a real Builder CSV and `.hcwc.json` in hand | – | Each item gives a written yes or no with numbers | Selection on lines fails → fall back to choosing by table or list | Everything else; no xtgeo (D8) |
+| **F. Feasibility** ✅ done 2026-10-09 (`docs/FEASIBILITY.md`) | Remove technical unknowns | Clean-venv Windows install of the §6.1 list; Plotly line-selection prototype; contourpy → shapely area convergence on the paraboloid (sets the T5 bound); RBF/TIN timing on 20 k → 50 k; a real Builder CSV and `.hcwc.json` in hand | – | Each item gives a written yes or no with numbers | Selection on lines fails → fall back to choosing by table or list | Everything else; no xtgeo (D8) |
 | **1. Data integrity** | Safe inputs and traceability | Phase 0 retrofits (§6.3); Source/derivation/version model; depth conversion; domain-checked arithmetic; explicit resampling; project save/load | F | T1–T4, T22, T23 | Model over-design | Formats beyond ZMAP+ |
 | **2. Closure and volumes** | Correct trap geometry and GRV | Priority-flood `s`, candidates, confirmation records, boundary types; area–depth (sub-cell); GRV via three routes with cross-check; outline clipping; Builder/SCOPE-HC area–depth export | 1 | T5–T13, T24; the hand-checked prospect | Saddle and edge cases; convergence | Faults |
 | **3. HCWC and POS** | The core probability output | CSV import with validation and the table editor; basis, conditioning and multiplier inputs; anchoring (default as is); POS maps for both events with categories; percentile area/GRV; typed depth→POS curves (total or conditional); Builder area–depth import; results report | 2 | T14–T20, T25–T27; crest POS = Builder Prospect POS on a real export | Semantics (C1–C3) | DHI basis (if deferred) |
