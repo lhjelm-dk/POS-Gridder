@@ -303,8 +303,86 @@ def _depth_convert(ctx, inputs: list[Surface], params) -> Output:
     return Output(z, "depth", _geometry(time), crs, warnings)
 
 
+# --------------------------------------------------------------------------- closures, outlines, volumes
+@dataclass
+class Fields:
+    """The result of an operation that makes something other than a surface."""
+    cls: type
+    fields: dict
+
+
+@operation("closure")
+def _closure(ctx, inputs: list, params) -> Fields:
+    """A confirmed closure: crest, chosen spill and boundary acceptance are the parameters."""
+    from posgridder.core.closure import Closure, interpret
+
+    (surface,) = inputs
+    try:
+        fields = interpret(surface, crest=tuple(params["crest"]),
+                           connectivity=int(params.get("connectivity", 8)),
+                           min_height=float(params.get("min_height", 5.0)),
+                           choice=params["choice"])
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    return Fields(Closure, dict(surface_uid=surface.uid, **fields))
+
+
+@operation("outline_points")
+def _outline_points(ctx, inputs, params) -> Fields:
+    from posgridder.core.outline import Outline
+
+    try:
+        coords = np.asarray(params["coords"], dtype=float)
+        Outline(uid="check", name="check", derivation=Derivation.make("check", []), coords=coords)
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    return Fields(Outline, dict(coords=coords, crs=params.get("crs")))
+
+
+@operation("outline_from_closure")
+def _outline_from_closure(ctx, inputs, params) -> Fields:
+    """The closure's footprint at the spill as an outline: the largest polygon of s ≤ spill."""
+    import contourpy
+    import shapely
+
+    from posgridder.core.outline import Outline
+
+    (closure,) = inputs
+    surface = ctx.project.objects[closure.surface_uid]
+    fill = np.ma.masked_invalid(closure.fill)
+    gen = contourpy.contour_generator(surface.x, surface.y, fill,
+                                      fill_type=contourpy.FillType.OuterOffset)
+    points, offsets = gen.filled(float(fill.min()) - 1.0, closure.spill_depth + 1e-6)
+    polys = [shapely.Polygon(p[o[0]:o[1]]) for p, o in zip(points, offsets) if o[1] - o[0] >= 3]
+    if not polys:
+        raise OperationError("the footprint is too small to outline")
+    best = max(polys, key=lambda q: q.area)
+    coords = np.asarray(best.exterior.coords)[:-1]
+    return Fields(Outline, dict(coords=coords, crs=surface.crs))
+
+
+@operation("volumes")
+def _volumes(ctx, inputs: list, params) -> Fields:
+    """Area–depth and GRV. ``params['roles']`` names each input: closure, top, base,
+    thickness or outline."""
+    from posgridder.core.volumes import VolumeResult, compute
+
+    roles = dict(zip(params["roles"], inputs))
+    closure, top = roles["closure"], roles["top"]
+    if closure.surface_uid != top.uid:
+        raise OperationError("the closure was interpreted on another surface than the top given")
+    try:
+        fields = compute(closure, top, geometry=params["geometry"], base=roles.get("base"),
+                         thickness_surface=roles.get("thickness"),
+                         thickness=params.get("thickness"), outline=roles.get("outline"),
+                         step=float(params.get("step", 1.0)))
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    return Fields(VolumeResult, fields)
+
+
 # --------------------------------------------------------------------------- running
-def _run(project: Project, op: str, input_uids: list[str], params: dict) -> Output:
+def _run(project: Project, op: str, input_uids: list[str], params: dict):
     if op not in OPERATIONS:
         raise OperationError(f"unknown operation {op!r}")
     ctx = Context(project)
@@ -313,8 +391,17 @@ def _run(project: Project, op: str, input_uids: list[str], params: dict) -> Outp
     return OPERATIONS[op](ctx, inputs, dict(params))
 
 
+def _build(out, *, uid: str, name: str, derivation: Derivation):
+    if isinstance(out, Fields):
+        return out.cls(uid=uid, name=name, derivation=derivation, **out.fields)
+    xori, yori, xinc, yinc = out.geometry
+    return Surface(uid=uid, name=name, xori=xori, yori=yori, xinc=xinc, yinc=yinc,
+                   values=out.values, domain=out.domain, crs=out.crs, derivation=derivation,
+                   warnings=tuple(out.warnings))
+
+
 def apply(project: Project, op: str, input_uids: list[str], params: dict | None = None, *,
-          name: str, replace: bool = False) -> Surface:
+          name: str, replace: bool = False):
     """Run ``op`` and add its result to the project.
 
     With ``replace`` (single-input operations only) the result becomes a new version of the
@@ -324,19 +411,16 @@ def apply(project: Project, op: str, input_uids: list[str], params: dict | None 
     if replace and (op not in REPLACEABLE or len(input_uids) != 1):
         raise OperationError(f"'{op}' cannot replace its input; it makes a new layer")
     out = _run(project, op, input_uids, params)
-    xori, yori, xinc, yinc = out.geometry
     supersedes = input_uids[0] if replace else None
-    surface = Surface(uid=new_uid(), name=name, xori=xori, yori=yori, xinc=xinc, yinc=yinc,
-                      values=out.values, domain=out.domain, crs=out.crs,
-                      derivation=Derivation.make(op, input_uids, params, supersedes=supersedes),
-                      warnings=tuple(out.warnings))
-    if surface.n_valid == 0:
+    item = _build(out, uid=new_uid(), name=name,
+                  derivation=Derivation.make(op, input_uids, params, supersedes=supersedes))
+    if isinstance(item, Surface) and item.n_valid == 0:
         raise OperationError(f"the result of {op} has no valid nodes")
-    return project.add(surface)
+    return project.add(item)
 
 
-def recalculate(project: Project, uid: str) -> Surface:
-    """Recompute a stale layer from the newest versions of its inputs, as a new version of it."""
+def recalculate(project: Project, uid: str):
+    """Recompute a stale object from the newest versions of its inputs, as a new version."""
     obj = project.objects[uid]
     d = obj.derivation
     if d.operation == "import":
@@ -347,12 +431,9 @@ def recalculate(project: Project, uid: str) -> Surface:
             raise OperationError(f"input '{project.objects[i].name}' is itself stale; "
                                  "recalculate it first")
     out = _run(project, d.operation, inputs, d.params)
-    xori, yori, xinc, yinc = out.geometry
-    surface = Surface(uid=new_uid(), name=obj.name, xori=xori, yori=yori, xinc=xinc, yinc=yinc,
-                      values=out.values, domain=out.domain, crs=out.crs,
-                      derivation=Derivation.make(d.operation, inputs, d.params, supersedes=uid),
-                      warnings=tuple(out.warnings))
-    return project.add(surface)
+    item = _build(out, uid=new_uid(), name=obj.name,
+                  derivation=Derivation.make(d.operation, inputs, d.params, supersedes=uid))
+    return project.add(item)
 
 
 @dataclass
@@ -361,11 +442,10 @@ class ReplayRow:
     name: str
     operation: str
     identical: bool
-    max_abs_diff: float
 
 
 def replay(project: Project) -> list[ReplayRow]:
-    """Recompute every object from the source files and compare it with what is stored.
+    """Recompute every object from the source files and compare its content hash.
 
     Objects are visited in creation order, which is dependency order, and each recomputation
     reads its inputs from the stored objects — so a mismatch is pinned to the step that made it.
@@ -373,15 +453,7 @@ def replay(project: Project) -> list[ReplayRow]:
     rows = []
     for uid, obj in project.objects.items():
         d = obj.derivation
-        out = _run(project, d.operation, list(d.inputs), d.params)
-        fresh = Surface(uid=uid, name=obj.name, xori=out.geometry[0], yori=out.geometry[1],
-                        xinc=out.geometry[2], yinc=out.geometry[3], values=out.values,
-                        domain=out.domain, crs=out.crs, derivation=d)
-        same_mask = (fresh.values.shape == obj.values.shape and
-                     bool(np.array_equal(np.ma.getmaskarray(fresh.values),
-                                         np.ma.getmaskarray(obj.values))))
-        diff = (float(np.ma.max(np.abs(fresh.values - obj.values))) if same_mask and obj.n_valid
-                else float("inf") if not same_mask else 0.0)
-        rows.append(ReplayRow(uid, obj.name, d.operation,
-                              fresh.content_hash == obj.content_hash, diff))
+        fresh = _build(_run(project, d.operation, list(d.inputs), d.params),
+                       uid=uid, name=obj.name, derivation=d)
+        rows.append(ReplayRow(uid, obj.name, d.operation, fresh.content_hash == obj.content_hash))
     return rows

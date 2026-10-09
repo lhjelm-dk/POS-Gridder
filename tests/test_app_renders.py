@@ -39,7 +39,7 @@ def _names(at) -> list[str]:
 def test_empty_app_renders():
     at = _app()
     assert not at.exception
-    assert any("no layers" in i.value.lower() for i in at.info)
+    assert any("no surfaces" in i.value.lower() for i in at.info)
 
 
 def test_layers_map_and_lineage():
@@ -109,3 +109,22 @@ def test_project_tab_replay():
     _button(at, "Run the replay check").click().run()
     assert not at.exception
     assert any("reproduce exactly" in s.value for s in at.success)
+
+
+def test_closure_and_volumes_workflow():
+    """Load the example, confirm the proposed closure, calculate volumes, see the exports."""
+    at = _app()
+    _button(at, "Load example project").click().run()
+    assert not at.exception
+    assert at.dataframe                                   # candidate table is shown
+    _button(at, "Confirm this interpretation").click().run()
+    assert not at.exception
+    proj = at.session_state["project"]
+    assert len(proj.current("closure")) == 1
+    assert any("Confirmed" in s.value for s in at.success)
+    calc = [b for b in at.button if b.label == "Calculate"]
+    calc[-1].click().run()                                # the volumes form's button
+    assert not at.exception
+    assert len(proj.current("volumes")) == 1
+    labels = [b.label for b in at.get("download_button")]
+    assert "HCWC Builder area–depth (CSV)" in labels

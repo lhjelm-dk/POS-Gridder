@@ -7,6 +7,7 @@ import streamlit as st
 from posgridder.core.model import ProjectError
 from posgridder.core.operations import replay
 from posgridder.io import project_file
+from posgridder.io.examples import load_example
 from posgridder.ui.state import notify, project, select
 
 
@@ -44,7 +45,7 @@ def _load() -> None:
             else:
                 st.session_state["project"] = loaded
                 select(loaded.layers[0] if loaded.layers else None)
-                notify("success", f"Opened {upload.name}: {len(loaded.layers)} layers, "
+                notify("success", f"Opened {upload.name}: {len(loaded.layers)} objects, "
                                   f"{len(loaded.objects)} versions, {len(loaded.sources)} source files.")
         st.rerun()
 
@@ -60,9 +61,8 @@ def _replay() -> None:
         except ProjectError as exc:
             st.error(f"The replay stopped: {exc}", icon=":material/error:")
             return
-        frame = pd.DataFrame([{"Layer": r.name, "Operation": r.operation,
-                               "Identical": r.identical, "Max difference": r.max_abs_diff}
-                              for r in rows])
+        frame = pd.DataFrame([{"Object": r.name, "Operation": r.operation,
+                               "Identical": r.identical} for r in rows])
         if frame["Identical"].all():
             st.success(f"All {len(rows)} versions reproduce exactly.", icon=":material/check_circle:")
         else:
@@ -82,7 +82,8 @@ def _history() -> None:
     for uid, obj in proj.objects.items():
         status = ("stale" if proj.is_stale(uid) else "current") if uid in current else (
             "superseded" if proj.successor(uid) else "history (input)")
-        rows.append({"Name": obj.name, "Domain": obj.domain, "Status": status,
+        rows.append({"Name": obj.name, "Kind": obj.kind,
+                     "Domain": getattr(obj, "domain", ""), "Status": status,
                      "Made by": obj.derivation.describe(), "Created (UTC)": obj.derivation.created,
                      "Id": uid[:12]})
     st.dataframe(pd.DataFrame(rows), hide_index=True)
@@ -90,6 +91,16 @@ def _history() -> None:
         st.dataframe(pd.DataFrame([{"File": s.filename, "Bytes": s.size, "SHA-256": s.sha256,
                                     "Imported (UTC)": s.imported}
                                    for s in proj.sources.values()]), hide_index=True)
+
+
+def _example() -> None:
+    st.subheader("Example", divider="gray")
+    st.write("A synthetic depth grid with two domes, a saddle and a data gap, for trying the "
+             "workflow. It is added to the current project like an imported file.")
+    if st.button("Load example project", icon=":material/science:"):
+        select(load_example(project()))
+        notify("success", "Added the example depth surface.")
+        st.rerun()
 
 
 def render() -> None:
@@ -100,3 +111,4 @@ def render() -> None:
         _load()
     _replay()
     _history()
+    _example()

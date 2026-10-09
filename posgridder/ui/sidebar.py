@@ -58,18 +58,19 @@ def _import_form() -> None:
 
 def _layer_list() -> None:
     proj = project()
-    names = [proj.objects[u].name for u in proj.layers]
+    surfaces = proj.current("surface")
+    names = [proj.objects[u].name for u in surfaces]
     pending = st.session_state.pop("_pending_active", None)
-    if pending in proj.layers:
+    if pending in surfaces:
         st.session_state["active_layer"] = proj.objects[pending].name
-    if not proj.layers:
-        st.caption("No layers in the project.")
+    if not surfaces:
+        st.caption("No surfaces in the project.")
         return
     if st.session_state.get("active_layer") not in names:
         st.session_state["active_layer"] = names[0]
     # Names are the options: they are unique among current layers, and a label that changes
     # (a layer turning stale) must not change the widget's value, so state goes in the captions.
-    st.radio("Layers", names, captions=[_caption(u) for u in proj.layers], key="active_layer")
+    st.radio("Surfaces", names, captions=[_caption(u) for u in surfaces], key="active_layer")
     active = active_uid()
 
     with st.container(horizontal=True):
@@ -78,8 +79,8 @@ def _layer_list() -> None:
             select(apply(proj, "copy", [active], name=f"{obj.name} copy").uid)
             st.rerun()
         if st.button("Delete", icon=":material/delete:",
-                     help="Takes the layer off the list. Layers made from it keep it in their "
-                          "history, so they stay reproducible."):
+                     help="Takes the surface off the list. Objects made from it keep it in "
+                          "their history, so they stay reproducible."):
             proj.remove(active)
             st.rerun()
     with st.form("rename_layer", border=False):
@@ -94,6 +95,6 @@ def render() -> None:
         st.subheader("Project", divider="gray")
         _layer_list()
         with st.expander("Import surfaces", icon=":material/upload_file:",
-                         expanded=not project().layers):
+                         expanded=not project().current("surface")):
             _import_form()
         st.caption(f"Formats: {', '.join(f.label for f in FORMATS.values())}")

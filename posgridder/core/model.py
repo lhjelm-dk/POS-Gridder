@@ -9,8 +9,13 @@ made it, and mark a layer *stale* when one of its inputs has since been replaced
 - :class:`Surface` — a regular, unrotated grid plus the :class:`Derivation` that produced it.
   ``values`` is a read-only masked array of shape ``(nrow, ncol)`` with **row 0 at the southern
   edge** and column 0 at the western edge, so ``values[i, j]`` sits at ``(x[j], y[i])``.
-- :class:`Project` — all sources and surfaces ever made, the ordered list of current layers, and
+- :class:`Project` — all sources and objects ever made, the ordered list of current ones, and
   the supersession links between versions.
+
+Besides surfaces the project holds closures, outlines and volume results (``core/closure.py``,
+``core/outline.py``, ``core/volumes.py``). Every kind shares one interface: ``uid``, ``name``,
+``derivation``, ``warnings``, ``kind``, ``content_hash``, ``renamed`` and
+``to_record``/``from_record`` for the project file. :data:`KINDS` maps a kind to its class.
 
 Depth and time are stored positive down. A file that stores them negative is flipped on import,
 and the flip is an import parameter in the derivation, not an edit of the file.
@@ -22,7 +27,7 @@ import json
 import uuid
 from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 
@@ -92,6 +97,26 @@ class Derivation:
         return f"{self.operation}({params})" if params else self.operation
 
 
+def read_only(array) -> np.ndarray:
+    """A read-only copy, for the arrays an immutable object holds."""
+    out = np.array(array)
+    out.flags.writeable = False
+    return out
+
+
+def hash_parts(*parts) -> str:
+    """SHA-256 over JSON-able values and arrays, in order: the content hash of any object."""
+    h = hashlib.sha256()
+    for part in parts:
+        if isinstance(part, np.ndarray):
+            h.update(str(part.dtype).encode())
+            h.update(str(part.shape).encode())
+            h.update(np.ascontiguousarray(part).tobytes())
+        else:
+            h.update(json.dumps(part, sort_keys=True, default=float).encode())
+    return h.hexdigest()
+
+
 def _read_only(values: np.ma.MaskedArray) -> np.ma.MaskedArray:
     data = np.array(np.ma.getdata(values), dtype=float)
     mask = np.array(np.ma.getmaskarray(values), dtype=bool)
@@ -105,6 +130,7 @@ def _read_only(values: np.ma.MaskedArray) -> np.ma.MaskedArray:
 
 @dataclass(frozen=True)
 class Surface:
+    kind: ClassVar[str] = "surface"
     uid: str
     name: str
     xori: float
@@ -198,6 +224,19 @@ class Surface:
         """The same object under another name. A name is a label, not data: the uid stays."""
         return replace(self, name=name)
 
+    # ------------------------------------------------------------------ project file
+    def to_record(self) -> tuple[dict, dict[str, np.ndarray]]:
+        meta = {"domain": self.domain, "crs": self.crs,
+                "geometry": [self.xori, self.yori, self.xinc, self.yinc]}
+        return meta, {"values": np.ma.getdata(self.values), "mask": np.ma.getmaskarray(self.values)}
+
+    @classmethod
+    def from_record(cls, common: dict, meta: dict, arrays: dict) -> "Surface":
+        g = meta["geometry"]
+        return cls(xori=g[0], yori=g[1], xinc=g[2], yinc=g[3],
+                   values=np.ma.MaskedArray(arrays["values"], mask=arrays["mask"]),
+                   domain=meta["domain"], crs=meta["crs"], **common)
+
 
 class ProjectError(ValueError):
     """A request the project refuses, with the reason in the message."""
@@ -226,7 +265,11 @@ class Project:
             n += 1
         return f"{base} ({n})"
 
-    def by_name(self, name: str) -> Surface:
+    def current(self, kind: str | None = None) -> list[str]:
+        """Uids of the current objects, optionally of one kind, in layer order."""
+        return [u for u in self.layers if kind is None or self.objects[u].kind == kind]
+
+    def by_name(self, name: str):
         for uid in self.layers:
             if self.objects[uid].name == name:
                 return self.objects[uid]
@@ -239,7 +282,7 @@ class Project:
         self.sources[source.uid] = source
         self.source_bytes[source.uid] = data
 
-    def add(self, surface: Surface) -> Surface:
+    def add(self, surface):
         """Register a new object and show it as a layer.
 
         A surface whose derivation ``supersedes`` another takes that layer's place in the list;
@@ -257,7 +300,7 @@ class Project:
             self.layers.append(surface.uid)
         return surface
 
-    def rename(self, uid: str, name: str) -> Surface:
+    def rename(self, uid: str, name: str):
         surface = self.objects[uid].renamed(self.unique_name(name, ignore=uid))
         self.objects[uid] = surface
         return surface

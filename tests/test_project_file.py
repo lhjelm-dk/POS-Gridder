@@ -89,3 +89,26 @@ def test_not_a_project():
         zf.writestr("manifest.json", json.dumps({"format": "something else"}))
     with pytest.raises(ProjectError, match="format"):
         project_file.load(blob.getvalue())
+
+
+def test_all_kinds_round_trip_and_replay(project):
+    """T22 for every kind: closure, outline and volume result reproduce from the source file."""
+    from posgridder.io.examples import load_example
+
+    top_uid = load_example(project)
+    top = project.objects[top_uid]
+    zz = np.ma.getdata(top.values)
+    crest = [int(v) for v in np.unravel_index(np.nanargmin(np.where(top.values.mask, np.inf, zz)),
+                                              zz.shape)]
+    closure = apply(project, "closure", [top_uid], {"crest": crest, "choice": {"event": 0}},
+                    name="closure")
+    outline = apply(project, "outline_from_closure", [closure.uid], name="outline")
+    vol = apply(project, "volumes", [closure.uid, top_uid, outline.uid],
+                {"roles": ["closure", "top", "outline"], "geometry": "top_constant",
+                 "thickness": 40.0}, name="volumes")
+    loaded = project_file.load(project_file.save(project))
+    assert {o.kind for o in loaded.objects.values()} == {"surface", "closure", "outline", "volumes"}
+    assert loaded.objects[vol.uid].content_hash == vol.content_hash
+    assert loaded.objects[closure.uid].spill_depth == closure.spill_depth
+    rows = replay(loaded)
+    assert all(r.identical for r in rows), [(r.name, r.operation) for r in rows if not r.identical]

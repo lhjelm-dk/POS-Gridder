@@ -34,7 +34,7 @@ def render() -> None:
     proj = project()
     uid = active()
     if uid is None:
-        st.info("The project holds no layers. Surfaces are imported in the sidebar.",
+        st.info("The project holds no surfaces. Surfaces are imported in the sidebar.",
                 icon=":material/info:")
         return
     surface = proj.objects[uid]

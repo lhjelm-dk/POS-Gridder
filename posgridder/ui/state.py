@@ -33,8 +33,9 @@ def uid_of(name: str | None) -> str | None:
 
 
 def active() -> str | None:
-    """The active layer's uid. The layer list holds its name."""
-    return uid_of(st.session_state.get("active_layer"))
+    """The active surface's uid. The layer list holds its name."""
+    uid = uid_of(st.session_state.get("active_layer"))
+    return uid if uid is not None and project().objects[uid].kind == "surface" else None
 
 
 def notify(kind: str, message: str) -> None:

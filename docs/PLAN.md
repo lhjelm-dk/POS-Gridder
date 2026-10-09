@@ -444,10 +444,19 @@ decision (§9) is required first.
   - "assume closed beyond (unverified)";
   - or a manual spill depth, recorded with a reason.
 
-  The confirmation is stored as an interpretation record. Results that depend on an unconfirmed
-  candidate are labelled *provisional*.
-- **Outputs:** confirmed crest, spill depth, spill type, footprint `F = {x : s(x) ≤ spill}`,
-  sub-culminations inside the footprint, and the field `s`.
+  The confirmation is stored as an interpretation record. *As built (Phase 2):* nothing
+  provisional is stored. Candidates and the live footprint preview exist only in the UI, and the
+  object is created by the confirmation itself, so every stored closure is confirmed.
+- **Outputs:** confirmed crest, spill depth, spill type, footprint, sub-culminations inside the
+  footprint, and the field `s`.
+  - *As built:* the footprint is `F = {s < spill} ∪ {z = spill}`. Nodes the fill reaches only
+    at the spill level itself lie beyond the spill point, downhill on the far side, and are
+    left out. Without that rule a neighbouring structure that leaks first is swept into the
+    trap; the GEUS grid showed 443 km² instead of 151 km².
+  - Each spill event's node is the *spill point*: the deepest node on the fill's path, found
+    during the flood. For a saddle it is the saddle node, not the culmination behind it.
+  - Saddle events at the same level, such as several noise minima behind one saddle, are merged
+    into one event.
 - **Warnings:**
   - closure height below the minimum;
   - interior null holes in the footprint;
@@ -459,12 +468,21 @@ decision (§9) is required first.
 
 ### 5.6 Area–depth and GRV — *definable now* (thickness definition: D7)
 
-- **Area:** `A_top(c)` is the area of `{s ≤ c} ∩ outline`, from contouring `s` at `c`. It is
-  sub-cell and connected-component-consistent. The node-count area is reported as a check.
-- **GRV, direct column integration:**
-  - Top+base: `GRV(c) = Σ_{x∈F} [min(base(x), c) − top(x)]⁺ · cell area`, restricted to
-    `s(x) ≤ c`.
-  - Top+thickness: `base = top + t`, where `t` is a constant or a grid. Thickness is vertical (C18).
+- **Area (as built):** `A_top(c)` is the area of `{top ≤ c}` within the footprint F, clipped by
+  the outline. It comes from contouring the top grid with nodes outside F pushed just deeper
+  than the spill, so the contour still interpolates across the rim. Masking those nodes would
+  drop a half-cell band all round.
+- **GRV, three curves:**
+  - **Direct:** `Σ_{x∈F} [min(base, c) − top]⁺ · cell area`.
+  - **Trapezoid:** `∫(A_top − A_base) dz`, which is what the Builder and SCOPE-HC compute.
+  - **Single fill:** the direct sum over nodes with `s ≤ c`.
+
+  Direct and trapezoid answer the same question by two routes, and their agreement is the
+  numerical check. Single fill differs only where a sub-culmination joins below its own top,
+  for contacts shallower than that saddle. An area–depth table cannot express a single fill
+  point, so the difference is reported rather than hidden.
+- **Top+thickness:** `base = top + t`, where `t` is a constant or a grid. Thickness is vertical
+  (C18).
 - **Area–depth export:** depths from the crest to the confirmed spill, in steps of ≤ 1 m (or a
   user-set step).
   - `A_base(c)` = area of `{base ≤ c}` *within the top footprint F*.
@@ -735,7 +753,7 @@ overshoots. The benchmark report is kept in `docs/` and re-run in CI.
 |---|---|---|---|---|---|---|
 | **F. Feasibility** ✅ done 2026-10-09 (`docs/FEASIBILITY.md`) | Remove technical unknowns | Clean-venv Windows install of the §6.1 list; Plotly line-selection prototype; contourpy → shapely area convergence on the paraboloid (sets the T5 bound); RBF/TIN timing on 20 k → 50 k; a real Builder CSV and `.hcwc.json` in hand | – | Each item gives a written yes or no with numbers | Selection on lines fails → fall back to choosing by table or list | Everything else; no xtgeo (D8) |
 | **1. Data integrity** ✅ done 2026-10-09 | Safe inputs and traceability | Phase 0 retrofits (§6.3); Source/derivation/version model; depth conversion; domain-checked arithmetic; explicit resampling; project save/load | F | T1–T4, T22, T23 | Model over-design | Formats beyond ZMAP+ |
-| **2. Closure and volumes** | Correct trap geometry and GRV | Priority-flood `s`, candidates, confirmation records, boundary types; area–depth (sub-cell); GRV via three routes with cross-check; outline clipping; Builder/SCOPE-HC area–depth export | 1 | T5–T13, T24; the hand-checked prospect | Saddle and edge cases; convergence | Faults |
+| **2. Closure and volumes** ✅ done 2026-10-09 | Correct trap geometry and GRV | Priority-flood `s`, candidates, confirmation records, boundary types; area–depth (sub-cell); GRV via three routes with cross-check; outline clipping; Builder/SCOPE-HC area–depth export | 1 | T5–T13, T24; the hand-checked prospect | Saddle and edge cases; convergence | Faults |
 | **3. HCWC and POS** | The core probability output | CSV import with validation and the table editor; basis, conditioning and multiplier inputs; anchoring (default as is); POS maps for both events with categories; percentile area/GRV; typed depth→POS curves (total or conditional); Builder area–depth import; results report | 2 | T14–T20, T25–T27; crest POS = Builder Prospect POS on a real export | Semantics (C1–C3) | DHI basis (if deferred) |
 | **4. Contour workflow** | Contour-first parity | Contour import (GeoPackage/Shapefile/GeoJSON, ASCII x y z id); select → delete; contours → surface (TIN and TPS) as reconciliation; benchmark report; stale propagation into phases 2–3 | 2 (needs 3 for the full POS chain) | T21 plus GEUS self-consistency; D9 thresholds met | Crest extrapolation (C7); selection UX | More gridders, digitising |
 | **5. Hardening** | v1 release | Warnings review, worked-example documentation, performance on the GEUS grid, user test on a real prospect | 1–4 | A real-prospect run reproduced from the saved project | – | All of §4.2 |

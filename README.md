@@ -6,15 +6,21 @@ closure and spill interpretation, area–depth and GRV, contact distributions fr
 POS mapped as a function of depth, and area/GRV across the contact percentiles. Every layer
 records how it was made and can be recomputed from the imported files.
 
-**Status:** Phase 1 of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
+**Status:** Phases 1–2 of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
 [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md)):
 - import with a declared domain and sign;
 - immutable layers with provenance, version history and stale flags;
 - depth conversion (constant velocity, velocity surface, V0 + kZ);
 - domain-checked arithmetic and explicit resampling;
-- project save/load with a replay check.
+- project save/load with a replay check;
+- crest and spill candidates, a confirmed closure interpretation (priority-flood fill depth,
+  boundary types, explicit acceptance);
+- area–depth and GRV for top + base, top + constant thickness and top + thickness surface;
+- outline clipping;
+- HCWC Builder and SCOPE-HC area–depth export.
 
-Closure and volumes come next.
+An example project (Project tab) makes a synthetic two-dome surface for trying the workflow.
+HCWC import and POS maps come next.
 
 ## Run
 

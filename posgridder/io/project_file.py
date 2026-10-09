@@ -1,14 +1,14 @@
-"""The project file: one zip holding everything needed to reproduce every layer.
+"""The project file: one zip holding everything needed to reproduce every object.
 
 Layout::
 
     manifest.json            format version, app version, sources, objects, layer order
     sources/<uid>            the imported files, byte for byte
-    objects/<uid>.npz        each surface version's values and mask
+    objects/<uid>.npz        each object's arrays (grid values and mask, fill field, tables …)
 
-Loading checks every source against its SHA-256 and every grid against its content hash, so a
-damaged or edited file is refused rather than half-read. :func:`posgridder.core.operations.replay`
-then recomputes every layer from the sources as an independent check.
+Loading checks every source against its SHA-256 and every object against its content hash, so
+a damaged or edited file is refused rather than half-read. :func:`posgridder.core.operations.replay`
+then recomputes every object from the sources as an independent check.
 """
 from __future__ import annotations
 
@@ -19,44 +19,47 @@ import zipfile
 import numpy as np
 
 from posgridder import __version__
-from posgridder.core.model import Derivation, Project, ProjectError, Source, Surface
+from posgridder.core.kinds import KINDS
+from posgridder.core.model import Derivation, Project, ProjectError, Source
 
 FORMAT = "pos-gridder-project"
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2          # 2: any kind of object (surface, closure, outline, volumes)
+
+
+def _jsonable(value):
+    if isinstance(value, np.generic):
+        return value.item()
+    raise TypeError(f"not JSON serialisable: {type(value).__name__}")
 
 
 def save(project: Project) -> bytes:
+    objects, arrays = [], {}
+    for o in project.objects.values():
+        meta, arr = o.to_record()
+        d = o.derivation
+        objects.append({
+            "kind": o.kind, "uid": o.uid, "name": o.name, "warnings": list(o.warnings),
+            "content_hash": o.content_hash, "meta": meta,
+            "derivation": {"operation": d.operation, "inputs": list(d.inputs),
+                           "params_json": d.params_json, "supersedes": d.supersedes,
+                           "app_version": d.app_version, "created": d.created},
+        })
+        arrays[o.uid] = arr
     manifest = {
-        "format": FORMAT,
-        "format_version": FORMAT_VERSION,
-        "app_version": __version__,
+        "format": FORMAT, "format_version": FORMAT_VERSION, "app_version": __version__,
         "layers": list(project.layers),
         "sources": [vars(s) for s in project.sources.values()],
-        "objects": [{
-            "uid": o.uid, "name": o.name, "domain": o.domain, "crs": o.crs,
-            "geometry": [o.xori, o.yori, o.xinc, o.yinc],
-            "warnings": list(o.warnings),
-            "content_hash": o.content_hash,
-            "derivation": {
-                "operation": o.derivation.operation,
-                "inputs": list(o.derivation.inputs),
-                "params_json": o.derivation.params_json,
-                "supersedes": o.derivation.supersedes,
-                "app_version": o.derivation.app_version,
-                "created": o.derivation.created,
-            },
-        } for o in project.objects.values()],
+        "objects": objects,
     }
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        zf.writestr("manifest.json", json.dumps(manifest, indent=2))
+        zf.writestr("manifest.json", json.dumps(manifest, indent=2, default=_jsonable))
         for uid, data in project.source_bytes.items():
             zf.writestr(f"sources/{uid}", data)
-        for o in project.objects.values():
-            arrays = io.BytesIO()
-            np.savez_compressed(arrays, values=np.ma.getdata(o.values),
-                                mask=np.ma.getmaskarray(o.values))
-            zf.writestr(f"objects/{o.uid}.npz", arrays.getvalue())
+        for uid, arr in arrays.items():
+            blob = io.BytesIO()
+            np.savez_compressed(blob, **arr)
+            zf.writestr(f"objects/{uid}.npz", blob.getvalue())
     return buffer.getvalue()
 
 
@@ -68,7 +71,8 @@ def load(data: bytes) -> Project:
         raise ProjectError(f"not a POS-Gridder project file ({exc})") from exc
     if manifest.get("format") != FORMAT:
         raise ProjectError("not a POS-Gridder project file (wrong format tag)")
-    if manifest.get("format_version", 0) > FORMAT_VERSION:
+    version = manifest.get("format_version", 0)
+    if version > FORMAT_VERSION:
         raise ProjectError(f"the project was written by a newer version "
                            f"({manifest.get('app_version')}); this is {__version__}")
 
@@ -77,20 +81,25 @@ def load(data: bytes) -> Project:
         source = Source(**s)
         project.add_source(source, zf.read(f"sources/{source.uid}"))   # checks the SHA-256
     for o in manifest["objects"]:
-        with np.load(io.BytesIO(zf.read(f"objects/{o['uid']}.npz"))) as arrays:
-            values = np.ma.MaskedArray(arrays["values"], mask=arrays["mask"])
+        if version < 2:                                  # version 1 held surfaces only
+            o = dict(o, kind="surface",
+                     meta={"domain": o["domain"], "crs": o["crs"], "geometry": o["geometry"]})
+        cls = KINDS.get(o["kind"])
+        if cls is None:
+            raise ProjectError(f"unknown object kind {o['kind']!r} in the project file")
+        with np.load(io.BytesIO(zf.read(f"objects/{o['uid']}.npz"))) as npz:
+            arrays = {k: npz[k] for k in npz.files}
         d = o["derivation"]
-        surface = Surface(
-            uid=o["uid"], name=o["name"], xori=o["geometry"][0], yori=o["geometry"][1],
-            xinc=o["geometry"][2], yinc=o["geometry"][3], values=values, domain=o["domain"],
-            crs=o["crs"], warnings=tuple(o["warnings"]),
-            derivation=Derivation(operation=d["operation"], inputs=tuple(d["inputs"]),
-                                  params_json=d["params_json"], supersedes=d["supersedes"],
-                                  app_version=d["app_version"], created=d["created"]))
-        if surface.content_hash != o["content_hash"]:
-            raise ProjectError(f"layer '{o['name']}' does not match its recorded hash; "
+        common = dict(uid=o["uid"], name=o["name"], warnings=tuple(o["warnings"]),
+                      derivation=Derivation(operation=d["operation"], inputs=tuple(d["inputs"]),
+                                            params_json=d["params_json"],
+                                            supersedes=d["supersedes"],
+                                            app_version=d["app_version"], created=d["created"]))
+        item = cls.from_record(common, o["meta"], arrays)
+        if item.content_hash != o["content_hash"]:
+            raise ProjectError(f"'{o['name']}' does not match its recorded hash; "
                                "the project file is damaged")
-        project.objects[surface.uid] = surface
+        project.objects[item.uid] = item
     missing = [uid for uid in manifest["layers"] if uid not in project.objects]
     if missing:
         raise ProjectError(f"the layer list names {len(missing)} objects the file does not hold")

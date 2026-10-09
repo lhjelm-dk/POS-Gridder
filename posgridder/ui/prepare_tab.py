@@ -26,7 +26,7 @@ ARITHMETIC = {
 def _layers(domains: tuple[str, ...] | None = None) -> list[str]:
     """Layer names, optionally of some domains. Names are unique among current layers."""
     proj = project()
-    return [proj.objects[u].name for u in proj.layers
+    return [proj.objects[u].name for u in proj.current("surface")
             if domains is None or proj.objects[u].domain in domains]
 
 
