@@ -6,7 +6,7 @@ closure and spill interpretation, area–depth and GRV, contact distributions fr
 POS mapped as a function of depth, and area/GRV across the contact percentiles. Every layer
 records how it was made and can be recomputed from the imported files.
 
-**Status:** Phases 1–2 of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
+**Status:** Phases 1–3 of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
 [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md)):
 - import with a declared domain and sign;
 - immutable layers with provenance, version history and stale flags;
@@ -17,10 +17,17 @@ records how it was made and can be recomputed from the imported files.
   boundary types, explicit acceptance);
 - area–depth and GRV for top + base, top + constant thickness and top + thickness surface;
 - outline clipping;
-- HCWC Builder and SCOPE-HC area–depth export.
+- HCWC Builder and SCOPE-HC area–depth export;
+- contact distributions from the HCWC Builder CSV (or pasted, typed and edited), with P(G),
+  h_min and the apex from the .hcwc.json;
+- POS maps for event (a), a column of at least h_min, and event (b), any column, read at the
+  fill depth, with every non-POS region labelled;
+- typed depth→POS curves;
+- area and GRV at each contact percentile;
+- JSON result reports.
 
 An example project (Project tab) makes a synthetic two-dome surface for trying the workflow.
-HCWC import and POS maps come next.
+The contour workflow comes next.
 
 ## Run
 

@@ -128,3 +128,40 @@ def test_closure_and_volumes_workflow():
     assert len(proj.current("volumes")) == 1
     labels = [b.label for b in at.get("download_button")]
     assert "HCWC Builder area–depth (CSV)" in labels
+
+
+UNIFORM = "\n".join(f"{p}\t{2080 + 1.6 * (100 - p):.2f}" for p in range(100, -1, -1))
+
+
+def test_hcwc_and_pos_workflow():
+    """Example → closure → volumes → pasted table → POS map (event a) → GRV by percentile."""
+    at = _app()
+    _button(at, "Load example project").click().run()
+    _button(at, "Confirm this interpretation").click().run()
+    [b for b in at.button if b.label == "Calculate"][-1].click().run()
+    assert not at.exception
+    paste = next(t for t in at.text_area if t.label.startswith("Percentile and depth"))
+    paste.set_value(UNIFORM)
+    at.selectbox(key="paste_basis").set_value("geological")
+    at.selectbox(key="paste_cond").set_value("h_min")
+    at.selectbox(key="paste_tails").set_value("raw")
+    at.number_input(key="paste_pg").set_value(0.35)
+    at.number_input(key="paste_f").set_value(0.8)
+    _button(at, "Add table").click().run()
+    assert not at.exception, at.exception
+    proj = at.session_state["project"]
+    assert len(proj.current("hcwc")) == 1
+
+    at.segmented_control(key="pos_section").set_value("POS map").run()
+    next(r for r in at.radio if r.label == "Event").set_value("a")
+    _button(at, "Map POS").click().run()
+    assert not at.exception, at.exception
+    (m,) = [proj.objects[u] for u in proj.current("posmap")]
+    assert m.summary["pos_at_crest"] == pytest.approx(0.35 * 0.8)
+    assert any(d.label == "POS grid (ZMAP+)" for d in at.get("download_button"))
+
+    at.segmented_control(key="pos_section").set_value("Area and GRV by percentile").run()
+    _button(at, "Evaluate").click().run()
+    assert not at.exception, at.exception
+    (pv,) = [proj.objects[u] for u in proj.current("pctvol")]
+    assert pv.summary["grv_P10_1e6m3"] > pv.summary["grv_P90_1e6m3"] > 0

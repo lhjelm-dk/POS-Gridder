@@ -24,6 +24,7 @@ Three GRV curves against the contact depth ``c``, in 10⁶ m³ (= km²·m):
 """
 from __future__ import annotations
 
+import io
 from dataclasses import dataclass, replace
 from typing import ClassVar
 
@@ -38,6 +39,7 @@ GEOMETRIES = {
     "top_base": "Top and base surfaces",
     "top_constant": "Top surface and a constant thickness",
     "top_grid": "Top surface and a thickness surface",
+    "imported_table": "Imported area–depth table",
 }
 AGREEMENT_TOLERANCE = 0.01          # F3: trapezoid vs direct, relative, at the spill
 MIN_RADIUS_CELLS = 10               # F3: below this the area bias exceeds ~0.5 %
@@ -274,3 +276,68 @@ def scope_csv(result: VolumeResult) -> str:
     out = pd.DataFrame({"Depth": t["depth_m"].round(3), "Top area (km2)": t["top_area_km2"].round(6),
                         "Base area (km2)": np.minimum(t["base_area_km2"], t["top_area_km2"]).round(6)})
     return out.to_csv(index=False, lineterminator="\n")
+
+
+# --------------------------------------------------------------------------- area-depth import
+#: Column spellings as HCWC Builder accepts them (hcwc/core/charge.py AREA_DEPTH_ALIASES).
+AREA_DEPTH_ALIASES: dict[str, tuple[str, ...]] = {
+    "depth_m": ("depth", "depthm", "depthmtvdss", "tvdss", "tvd", "z", "mtvdss"),
+    "top_area_km2": ("toparea", "toparea km2", "areatop", "top", "area", "areakm2",
+                     "topareakm2"),
+    "base_area_km2": ("basearea", "areabase", "base", "baseareakm2"),
+}
+
+
+def parse_area_depth(data: bytes) -> pd.DataFrame:
+    """An area–depth table in the Builder format (loose column names, '#' comments)."""
+    text = data.decode("utf-8-sig", errors="replace")
+    frame = pd.read_csv(io.StringIO(text), comment="#")
+    canon = {"".join(ch for ch in str(c).lower() if ch.isalnum()): c for c in frame.columns}
+    found = {}
+    for target, spellings in AREA_DEPTH_ALIASES.items():
+        for spelling in (target, *spellings):
+            key = "".join(ch for ch in spelling.lower() if ch.isalnum())
+            if key in canon:
+                found[target] = canon[key]
+                break
+    if "depth_m" not in found or "top_area_km2" not in found:
+        raise ValueError("an area–depth table needs a depth and a top-area column; the file has "
+                         + ", ".join(map(str, frame.columns)))
+    out = pd.DataFrame({
+        "depth_m": pd.to_numeric(frame[found["depth_m"]], errors="coerce"),
+        "top_area_km2": pd.to_numeric(frame[found["top_area_km2"]], errors="coerce"),
+        "base_area_km2": (pd.to_numeric(frame[found["base_area_km2"]], errors="coerce")
+                          if "base_area_km2" in found else 0.0),
+    }).dropna(subset=["depth_m", "top_area_km2"])
+    out["base_area_km2"] = out["base_area_km2"].fillna(0.0)
+    d = out["depth_m"].to_numpy()
+    if len(d) < 2 or (np.diff(d) <= 0).any():
+        raise ValueError("depths must increase strictly from the apex down, over two rows or more")
+    if (out["base_area_km2"] > out["top_area_km2"] + 1e-9).any():
+        raise ValueError("base area exceeds top area somewhere; the columns may be swapped")
+    return out.reset_index(drop=True)
+
+
+def from_area_depth(table: pd.DataFrame, filename: str) -> dict:
+    """VolumeResult fields for an imported table: GRV is the table trapezoid."""
+    d = table["depth_m"].to_numpy(float)
+    net = (table["top_area_km2"] - table["base_area_km2"]).to_numpy(float)
+    trap = np.concatenate([[0.0], np.cumsum(np.diff(d) * 0.5 * (net[1:] + net[:-1]))])
+    full = pd.DataFrame({"depth_m": d, "top_area_km2": table["top_area_km2"].to_numpy(float),
+                         "base_area_km2": table["base_area_km2"].to_numpy(float),
+                         "grv_trapezoid_1e6m3": trap, "grv_direct_1e6m3": trap,
+                         "grv_single_fill_1e6m3": trap})
+    warnings = []
+    if table["base_area_km2"].eq(0).all():
+        warnings.append("The table has no base area: the GRV is the whole volume below the top "
+                        "surface (an unlimited thickness).")
+    summary = {"crest_depth_m": float(d[0]), "spill_depth_m": float(d[-1]),
+               "area_at_spill_km2": float(full["top_area_km2"].iloc[-1]),
+               "grv_direct_at_spill_1e6m3": float(trap[-1]),
+               "grv_trapezoid_at_spill_1e6m3": float(trap[-1]), "agreement_relative": 0.0,
+               "radius_cells": float("nan"), "nodes": 0, "step_m": float(np.min(np.diff(d)))}
+    assumptions = (f"Imported area–depth table '{filename}'. Its first row is taken as the "
+                   "crest and its last as the spill; GRV is the trapezoid of the table "
+                   "(no map, so no direct or single-fill check).",)
+    return dict(geometry="imported_table", table=full, summary=summary, assumptions=assumptions,
+                warnings=tuple(warnings))

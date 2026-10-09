@@ -1,0 +1,550 @@
+{
+  "format": 1,
+  "tool": "HCWC Distribution Builder",
+  "name": "Vestre Low (spill-limited example)",
+  "inputs": {
+    "lim_Closure / spill point_kind": "depth",
+    "lim_Base seal (capillary)_on": true,
+    "lim_Fault geometry 2_pert_mode": 2318.0,
+    "lim_Closure / spill point_pa": 1.0,
+    "lim_Fault leakage 2_pert_minimum": 140.0,
+    "lim_Top seal (continuity)_pa": 0.3,
+    "lim_Fault geometry 1_pert_minimum": 2150.0,
+    "lim_Charge_kind": "column",
+    "lim_Top seal (capillary)_rw": {
+      "__tuple__": [
+        1.0,
+        1.1
+      ]
+    },
+    "lim_Fault geometry 1_pert_maximum": 2210.0,
+    "lim_Closure / spill point_pert_minimum": 2190.0,
+    "lim_Base seal (capillary)_kind": "column",
+    "lim_Preservation / tilt_kind": "column",
+    "lim_Base seal (capillary)_pert_mode": 160.0,
+    "lim_Fault leakage 2_form": "pert",
+    "lim_Closure / spill point_on": true,
+    "lim_Preservation / tilt_src": "Typed",
+    "lim_Fault geometry 2_on": true,
+    "lim_Fault geometry 2_pert_maximum": 2390.0,
+    "lim_Wedge geometry_pert_minimum": 2300.0,
+    "lim_Top seal (continuity)_pert_maximum": 350.0,
+    "lim_Wedge geometry_kind": "depth",
+    "lim_Fault geometry 2_pa": 0.0,
+    "lim_Preservation / tilt_pert_mode": 250.0,
+    "lim_Base seal (continuity)_kind": "column",
+    "cond_Reservoir": 0.7,
+    "prospect_name": "Vestre Low (spill-limited example)",
+    "lim_Base seal (continuity)_pert_maximum": 380.0,
+    "lim_Closure / spill point_pert_mode": 2200.0,
+    "lim_Fault geometry 1_pert_mode": 2185.0,
+    "lim_Top seal (capillary)_theta": {
+      "__tuple__": [
+        0.0,
+        30.0
+      ]
+    },
+    "lim_Charge_pert_minimum": 250.0,
+    "lim_Fault geometry 2_form": "pert",
+    "lim_Top seal (capillary)_rr": {
+      "__tuple__": [
+        2.0,
+        3.5
+      ]
+    },
+    "lim_Base seal (continuity)_pert_mode": 224.0,
+    "lim_Fault geometry 1_pa": 0.2,
+    "lim_Preservation / tilt_form": "pert",
+    "lim_Top seal (capillary)_on": true,
+    "spill_input": 2200.0,
+    "lim_Fault leakage 2_pert_maximum": 320.0,
+    "lim_Base seal (capillary)_pert_minimum": 80.0,
+    "dhi_toggle": false,
+    "lim_Fault leakage 2_pa": 0.4,
+    "lim_Top seal (continuity)_kind": "column",
+    "lim_Top seal (capillary)_fluid": "Oil",
+    "cond_Retention": 0.8,
+    "lim_Top seal (continuity)_pert_minimum": 100.0,
+    "play_Closure": 1.0,
+    "lim_Fault leakage 1_on": true,
+    "lim_Charge_src": "Typed",
+    "n_trials_input": 10000,
+    "lim_Fault geometry 2_kind": "depth",
+    "lim_Preservation / tilt_pa": 0.1,
+    "lim_Top seal (continuity)_pert_mode": 200.0,
+    "lim_Fault leakage 1_kind": "column",
+    "lim_Fault leakage 2_src": "Typed",
+    "lim_Fault geometry 1_form": "pert",
+    "play_Charge": 1.0,
+    "seed_input": 20260825,
+    "play_Reservoir": 0.9,
+    "lim_Fault leakage 2_kind": "column",
+    "lim_Charge_pert_mode": 400.0,
+    "lim_Fault leakage 1_pert_minimum": 120.0,
+    "lim_Wedge geometry_form": "pert",
+    "lim_Fault leakage 1_pert_mode": 190.0,
+    "burial_input": 2050.0,
+    "lim_Fault geometry 2_pert_minimum": 2270.0,
+    "lim_Wedge geometry_pa": 0.0,
+    "lim_Top seal (continuity)_on": true,
+    "lim_Fault geometry 1_on": true,
+    "lim_Top seal (continuity)_form": "pert",
+    "lim_Top seal (continuity)_src": "Typed",
+    "lim_Base seal (capillary)_pert_maximum": 280.0,
+    "lim_Fault leakage 1_pert_maximum": 300.0,
+    "lim_Preservation / tilt_on": true,
+    "lim_Fault leakage 2_pert_mode": 212.0,
+    "lim_Charge_form": "pert",
+    "lim_Base seal (continuity)_on": true,
+    "lim_Base seal (continuity)_pa": 0.0,
+    "lim_Fault leakage 1_form": "pert",
+    "play_Retention": 0.9,
+    "lim_Wedge geometry_pert_maximum": 2410.0,
+    "lim_Base seal (capillary)_pa": 0.0,
+    "lim_Base seal (continuity)_form": "pert",
+    "min_column_input": 100.0,
+    "lim_Fault geometry 1_kind": "depth",
+    "lim_Top seal (capillary)_rs": {
+      "__tuple__": [
+        0.01,
+        0.05
+      ]
+    },
+    "lim_Closure / spill point_pert_maximum": 2212.0,
+    "lim_Top seal (capillary)_t": {
+      "__tuple__": [
+        56.0,
+        87.0
+      ]
+    },
+    "lim_Fault leakage 1_pa": 0.3,
+    "lim_Fault leakage 1_src": "Typed",
+    "lim_Closure / spill point_form": "pert",
+    "lim_Preservation / tilt_pert_minimum": 150.0,
+    "lim_Charge_on": true,
+    "lim_Charge_pa": 1.0,
+    "lim_Base seal (capillary)_form": "pert",
+    "lim_Base seal (continuity)_pert_minimum": 120.0,
+    "lim_Base seal (continuity)_src": "Typed",
+    "apex_p99": 2051.0,
+    "cond_Closure": 1.0,
+    "lim_Base seal (capillary)_src": "Typed",
+    "cond_Charge": 0.9,
+    "apex_p1": 2049.0,
+    "lim_Top seal (capillary)_net": true,
+    "lim_Wedge geometry_on": true,
+    "lim_Top seal (capillary)_rh": {
+      "__tuple__": [
+        0.7,
+        0.85
+      ]
+    },
+    "lim_Top seal (capillary)_src": "seal",
+    "lim_Charge_pert_maximum": 600.0,
+    "lim_Preservation / tilt_pert_maximum": 400.0,
+    "lim_Fault leakage 2_on": true,
+    "lim_Wedge geometry_pert_mode": 2344.0
+  },
+  "resolved": {
+    "name": "Tofte North (worked example)",
+    "apex": {
+      "kind": "normal_alt",
+      "params": {
+        "p1": 0.01,
+        "x1": 2049.0,
+        "p2": 0.99,
+        "x2": 2051.0
+      }
+    },
+    "min_column_m": 120.0,
+    "limits": [
+      {
+        "name": "Charge",
+        "group": "Charge",
+        "p_active": 1.0,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 100.0,
+            "mode": 220.0,
+            "maximum": 400.0
+          }
+        },
+        "note": "",
+        "kind": "column"
+      },
+      {
+        "name": "Closure / spill point",
+        "group": "Closure",
+        "p_active": 1.0,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 2340.0,
+            "mode": 2372.0,
+            "maximum": 2420.0
+          }
+        },
+        "note": "",
+        "kind": "depth"
+      },
+      {
+        "name": "Fault geometry 1",
+        "group": "Closure",
+        "p_active": 0.5,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 2250.0,
+            "mode": 2298.0,
+            "maximum": 2370.0
+          }
+        },
+        "note": "",
+        "kind": "depth"
+      },
+      {
+        "name": "Fault geometry 2",
+        "group": "Closure",
+        "p_active": 0.0,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 2270.0,
+            "mode": 2318.0,
+            "maximum": 2390.0
+          }
+        },
+        "note": "",
+        "kind": "depth"
+      },
+      {
+        "name": "Wedge geometry",
+        "group": "Closure",
+        "p_active": 0.0,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 2300.0,
+            "mode": 2344.0,
+            "maximum": 2410.0
+          }
+        },
+        "note": "",
+        "kind": "depth"
+      },
+      {
+        "name": "Fault leakage 1",
+        "group": "Retention",
+        "p_active": 0.6,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 120.0,
+            "mode": 192.0,
+            "maximum": 300.0
+          }
+        },
+        "note": "",
+        "kind": "column"
+      },
+      {
+        "name": "Fault leakage 2",
+        "group": "Retention",
+        "p_active": 0.4,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 140.0,
+            "mode": 212.0,
+            "maximum": 320.0
+          }
+        },
+        "note": "",
+        "kind": "column"
+      },
+      {
+        "name": "Top seal (capillary)",
+        "group": "Retention",
+        "p_active": 1.0,
+        "distribution": {
+          "kind": "empirical",
+          "params": {
+            "cumulative": [
+              0.0,
+              0.01,
+              0.02,
+              0.03,
+              0.04,
+              0.05,
+              0.06,
+              0.07,
+              0.08,
+              0.09,
+              0.1,
+              0.11,
+              0.12,
+              0.13,
+              0.14,
+              0.15,
+              0.16,
+              0.17,
+              0.18,
+              0.19,
+              0.2,
+              0.21,
+              0.22,
+              0.23,
+              0.24,
+              0.25,
+              0.26,
+              0.27,
+              0.28,
+              0.29,
+              0.3,
+              0.31,
+              0.32,
+              0.33,
+              0.34,
+              0.35000000000000003,
+              0.36,
+              0.37,
+              0.38,
+              0.39,
+              0.4,
+              0.41000000000000003,
+              0.42,
+              0.43,
+              0.44,
+              0.45,
+              0.46,
+              0.47000000000000003,
+              0.48,
+              0.49,
+              0.5,
+              0.51,
+              0.52,
+              0.53,
+              0.54,
+              0.55,
+              0.56,
+              0.5700000000000001,
+              0.58,
+              0.59,
+              0.6,
+              0.61,
+              0.62,
+              0.63,
+              0.64,
+              0.65,
+              0.66,
+              0.67,
+              0.68,
+              0.6900000000000001,
+              0.7000000000000001,
+              0.71,
+              0.72,
+              0.73,
+              0.74,
+              0.75,
+              0.76,
+              0.77,
+              0.78,
+              0.79,
+              0.8,
+              0.81,
+              0.8200000000000001,
+              0.8300000000000001,
+              0.84,
+              0.85,
+              0.86,
+              0.87,
+              0.88,
+              0.89,
+              0.9,
+              0.91,
+              0.92,
+              0.93,
+              0.9400000000000001,
+              0.9500000000000001,
+              0.96,
+              0.97,
+              0.98,
+              0.99,
+              1.0
+            ],
+            "value": [
+              61.68658458741727,
+              89.38653106388114,
+              95.22157671435943,
+              100.09894124948705,
+              103.51766542929384,
+              106.8138954953381,
+              110.29769292847652,
+              113.04883768352377,
+              115.87975001052186,
+              118.30741100964826,
+              120.5285684386447,
+              122.4570854110279,
+              124.6774486692787,
+              127.19632394764561,
+              129.2735074681182,
+              131.8096583836231,
+              134.01314778716164,
+              135.73250428469504,
+              138.17596885504838,
+              140.53667689553845,
+              142.64439611379288,
+              145.08519232830218,
+              147.41207763466255,
+              149.74080260636296,
+              151.8176845849252,
+              154.18791257670904,
+              156.42543547625897,
+              158.73869417487654,
+              161.15597242030512,
+              163.27208312202941,
+              165.63309388717974,
+              168.03843874731155,
+              170.11336384044404,
+              172.568031254731,
+              175.07169323216522,
+              177.22574265507504,
+              179.80393741501842,
+              182.15253914375936,
+              184.92284501597976,
+              187.19129120472724,
+              189.76368168767345,
+              192.45075571078112,
+              195.64020544428251,
+              198.14050912161568,
+              201.44897286692742,
+              204.21159509930771,
+              207.00508199397385,
+              210.33807950801523,
+              213.5973479862357,
+              217.0078114473251,
+              220.38858107908823,
+              224.40571788853435,
+              228.43194839794347,
+              231.823683996544,
+              235.54189977728916,
+              239.2942414163866,
+              244.2323645609905,
+              247.74949384974758,
+              252.61660678575973,
+              257.954078141759,
+              263.02897317734914,
+              266.71109967867767,
+              272.16860186934423,
+              277.77060261768514,
+              282.7878409947914,
+              287.9323333484508,
+              293.1133337459609,
+              299.6829036039322,
+              305.88210286457706,
+              314.3928317878461,
+              322.9679325222993,
+              330.851873818505,
+              339.2048866419246,
+              347.50109626194984,
+              356.31547840433217,
+              364.970625110368,
+              372.74059116274043,
+              379.3986421076492,
+              389.0927442755207,
+              398.92307790526013,
+              409.94668826652986,
+              420.2256629871673,
+              433.7475958721181,
+              444.59759902888254,
+              460.9543095687758,
+              475.6982692240241,
+              489.5726838503192,
+              507.30118659884425,
+              524.5515011524595,
+              544.0589036763868,
+              565.7124674617951,
+              588.0024400323193,
+              607.7911768001429,
+              636.2700311165053,
+              670.8291923587232,
+              706.9044213131283,
+              746.9200430199975,
+              801.691408673663,
+              878.9692477701993,
+              996.82242517528,
+              1628.2343778159843
+            ]
+          }
+        },
+        "note": "computed: Gas, r 0.03\u20130.20 \u00b5m",
+        "kind": "column"
+      },
+      {
+        "name": "Base seal (capillary)",
+        "group": "Retention",
+        "p_active": 0.0,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 80.0,
+            "mode": 160.0,
+            "maximum": 280.0
+          }
+        },
+        "note": "",
+        "kind": "column"
+      },
+      {
+        "name": "Top seal (continuity)",
+        "group": "Retention",
+        "p_active": 0.5,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 100.0,
+            "mode": 200.0,
+            "maximum": 350.0
+          }
+        },
+        "note": "",
+        "kind": "column"
+      },
+      {
+        "name": "Base seal (continuity)",
+        "group": "Retention",
+        "p_active": 0.0,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 120.0,
+            "mode": 224.0,
+            "maximum": 380.0
+          }
+        },
+        "note": "",
+        "kind": "column"
+      },
+      {
+        "name": "Preservation / tilt",
+        "group": "Retention",
+        "p_active": 0.2,
+        "distribution": {
+          "kind": "pert",
+          "params": {
+            "minimum": 150.0,
+            "mode": 250.0,
+            "maximum": 400.0
+          }
+        },
+        "note": "",
+        "kind": "column"
+      }
+    ],
+    "correlations": {
+      "Top seal (capillary)|Base seal (capillary)": 0.7,
+      "Top seal (continuity)|Base seal (continuity)": 0.7
+    }
+  }
+}

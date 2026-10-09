@@ -576,6 +576,16 @@ decision (§9) is required first.
 
   Both kinds can be mapped side by side. The declared meaning appears in the layer name and in
   the provenance.
+- **As built (Phase 3):**
+  - Event (a) from an unconditioned table is `P(G) · E_all(max(s, apex + h_min))`. That is
+    the "renormalising" above written in its exact form; the derived F(h_min) = E_all(apex +
+    h_min) is reported.
+  - The apex read from a `.hcwc.json` is the midpoint of its typed P1 and P99.
+  - Typed POS curves are entered in percent.
+  - Categories are stored as an integer grid next to the POS grid. The ZMAP+ export holds
+    POS only, null wherever no POS is mapped.
+  - The crest check (POS at the crest against the Prospect POS) passes on the real Builder
+    export (fixture): 0.3630 = 0.40824 × 0.8891.
 
 ### 5.9 Area and GRV across HCWC percentiles — *definable now* (inherits D1, D3)
 
@@ -754,7 +764,7 @@ overshoots. The benchmark report is kept in `docs/` and re-run in CI.
 | **F. Feasibility** ✅ done 2026-10-09 (`docs/FEASIBILITY.md`) | Remove technical unknowns | Clean-venv Windows install of the §6.1 list; Plotly line-selection prototype; contourpy → shapely area convergence on the paraboloid (sets the T5 bound); RBF/TIN timing on 20 k → 50 k; a real Builder CSV and `.hcwc.json` in hand | – | Each item gives a written yes or no with numbers | Selection on lines fails → fall back to choosing by table or list | Everything else; no xtgeo (D8) |
 | **1. Data integrity** ✅ done 2026-10-09 | Safe inputs and traceability | Phase 0 retrofits (§6.3); Source/derivation/version model; depth conversion; domain-checked arithmetic; explicit resampling; project save/load | F | T1–T4, T22, T23 | Model over-design | Formats beyond ZMAP+ |
 | **2. Closure and volumes** ✅ done 2026-10-09 | Correct trap geometry and GRV | Priority-flood `s`, candidates, confirmation records, boundary types; area–depth (sub-cell); GRV via three routes with cross-check; outline clipping; Builder/SCOPE-HC area–depth export | 1 | T5–T13, T24; the hand-checked prospect | Saddle and edge cases; convergence | Faults |
-| **3. HCWC and POS** | The core probability output | CSV import with validation and the table editor; basis, conditioning and multiplier inputs; anchoring (default as is); POS maps for both events with categories; percentile area/GRV; typed depth→POS curves (total or conditional); Builder area–depth import; results report | 2 | T14–T20, T25–T27; crest POS = Builder Prospect POS on a real export | Semantics (C1–C3) | DHI basis (if deferred) |
+| **3. HCWC and POS** ✅ done 2026-10-09 | The core probability output | CSV import with validation and the table editor; basis, conditioning and multiplier inputs; anchoring (default as is); POS maps for both events with categories; percentile area/GRV; typed depth→POS curves (total or conditional); Builder area–depth import; results report | 2 | T14–T20, T25–T27; crest POS = Builder Prospect POS on a real export | Semantics (C1–C3) | DHI basis (if deferred) |
 | **4. Contour workflow** | Contour-first parity | Contour import (GeoPackage/Shapefile/GeoJSON, ASCII x y z id); select → delete; contours → surface (TIN and TPS) as reconciliation; benchmark report; stale propagation into phases 2–3 | 2 (needs 3 for the full POS chain) | T21 plus GEUS self-consistency; D9 thresholds met | Crest extrapolation (C7); selection UX | More gridders, digitising |
 | **5. Hardening** | v1 release | Warnings review, worked-example documentation, performance on the GEUS grid, user test on a real prospect | 1–4 | A real-prospect run reproduced from the saved project | – | All of §4.2 |
 

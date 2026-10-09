@@ -381,13 +381,141 @@ def _volumes(ctx, inputs: list, params) -> Fields:
     return Fields(VolumeResult, fields)
 
 
+# --------------------------------------------------------------------------- HCWC and POS
+def _source(ctx: Context, uid: str) -> tuple[bytes, str]:
+    return ctx.project.source_bytes[uid], ctx.project.sources[uid].filename
+
+
+@operation("hcwc")
+def _hcwc(ctx, inputs: list, params) -> Fields:
+    """A contact distribution: from a Builder CSV or a typed table, with the multiplier inputs.
+
+    ``params['roles']`` names the source inputs: ``csv`` and/or ``json``. Typed values in
+    ``params`` take precedence over the .hcwc.json; where each value came from is recorded.
+    """
+    from posgridder.core.hcwc import ContactDistribution, TableError, parse_csv, parse_hcwc_json
+
+    roles = dict(zip(params.get("roles", []), inputs))
+    sources: list[str] = []
+    warnings: list[str] = []
+    try:
+        if "csv" in roles:
+            data, filename = _source(ctx, roles["csv"])
+            p, d, header = parse_csv(data)
+            origin = f"file {filename} (depth column '{header}')"
+        else:
+            p = np.asarray(params["table"]["percentiles"], dtype=float)
+            d = np.asarray(params["table"]["depths"], dtype=float)
+            origin = params.get("origin", "typed or pasted table")
+        if params.get("flip_sign"):
+            d = -d
+            origin += ", sign flipped"
+        values = {k: params.get(k) for k in ("p_g", "f_hmin", "h_min", "apex")}
+        for k in values:
+            if values[k] is not None:
+                sources.append(f"{k} = {values[k]:g} typed")
+        if "json" in roles:
+            data, filename = _source(ctx, roles["json"])
+            info = parse_hcwc_json(data)
+            if values["p_g"] is None and "p_g" in info:
+                if params["basis"] == "given_dhi":
+                    raise OperationError(
+                        f"{filename} gives the prior P(G); a given-the-DHI table needs P(G | DHI), "
+                        "which is typed")
+                values["p_g"] = info["p_g"]
+                parts = " × ".join(f"{e} {v:.3g}" for e, v in info["elements"].items())
+                sources.append(f"p_g = {info['p_g']:.4f} from {filename} inputs ({parts})")
+            if values["h_min"] is None and "h_min" in info:
+                values["h_min"] = info["h_min"]
+                sources.append(f"h_min = {info['h_min']:g} m from {filename} inputs")
+            if values["apex"] is None and "apex" in info:
+                values["apex"] = info["apex"]
+                sources.append(f"apex = {info['apex']:.1f} m from {filename} inputs "
+                               "(midpoint of its P1 and P99)")
+            if info.get("dhi") and params["basis"] == "geological":
+                warnings.append(f"{filename} has a DHI switched on; this table is declared "
+                                "geological.")
+        if params["conditioning"] == "h_min" and values["f_hmin"] is None:
+            warnings.append("F(h_min) is not given; event (a) cannot be mapped from this "
+                            "conditioned table until it is.")
+        if values["h_min"] is None:
+            warnings.append("h_min is not given; the band shallower than apex + h_min cannot be "
+                            "placed.")
+        if params["tails"] == "unknown":
+            warnings.append("The tail treatment is not known; P100 and P0 may be single samples.")
+        fields = dict(percentiles=p, depths=d, basis=params["basis"],
+                      conditioning=params["conditioning"], tails=params["tails"],
+                      origin=origin, sources=tuple(sources), warnings=tuple(warnings), **values)
+        ContactDistribution(uid="check", name="check", derivation=Derivation.make("check", []),
+                            **fields)
+    except OperationError:
+        raise
+    except (TableError, ValueError, KeyError) as exc:
+        raise OperationError(str(exc).strip("'")) from None
+    return Fields(ContactDistribution, fields)
+
+
+@operation("pos_curve")
+def _pos_curve(ctx, inputs, params) -> Fields:
+    from posgridder.core.hcwc import PosCurve
+
+    fields = dict(depths=np.asarray(params["depths"], dtype=float),
+                  values=np.asarray(params["values"], dtype=float), meaning=params["meaning"])
+    try:
+        PosCurve(uid="check", name="check", derivation=Derivation.make("check", []), **fields)
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    return Fields(PosCurve, fields)
+
+
+@operation("pos_map")
+def _pos_map(ctx, inputs, params) -> Fields:
+    from posgridder.core.pos import PosMap, pos_map
+
+    roles = dict(zip(params["roles"], inputs))
+    closure, top = roles["closure"], roles["top"]
+    if closure.surface_uid != top.uid:
+        raise OperationError("the closure was interpreted on another surface than the top given")
+    try:
+        fields = pos_map(closure, top, dist=roles.get("hcwc"), curve=roles.get("curve"),
+                         event=params.get("event", "a"), anchoring=params.get("anchoring", "as_is"),
+                         outline=roles.get("outline"), p_g_curve=params.get("p_g"))
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    return Fields(PosMap, fields)
+
+
+@operation("percentile_volumes")
+def _percentile_volumes(ctx, inputs, params) -> Fields:
+    from posgridder.core.pos import PercentileVolumes, percentile_volumes
+
+    volumes, dist = inputs
+    try:
+        fields = percentile_volumes(volumes, dist, anchoring=params.get("anchoring", "as_is"))
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    return Fields(PercentileVolumes, fields)
+
+
+@operation("area_depth_import")
+def _area_depth_import(ctx, inputs, params) -> Fields:
+    from posgridder.core.volumes import VolumeResult, from_area_depth, parse_area_depth
+
+    (source,) = inputs
+    data, filename = _source(ctx, source)
+    try:
+        return Fields(VolumeResult, from_area_depth(parse_area_depth(data), filename))
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+
+
 # --------------------------------------------------------------------------- running
 def _run(project: Project, op: str, input_uids: list[str], params: dict):
     if op not in OPERATIONS:
         raise OperationError(f"unknown operation {op!r}")
     ctx = Context(project)
-    inputs = (list(input_uids) if op == "import"
-              else [project.objects[uid] for uid in input_uids])
+    # Objects are passed as themselves; source files by their uid (their bytes are in ctx).
+    inputs = [project.objects[u] if u in project.objects else u for u in input_uids]
     return OPERATIONS[op](ctx, inputs, dict(params))
 
 
@@ -401,17 +529,18 @@ def _build(out, *, uid: str, name: str, derivation: Derivation):
 
 
 def apply(project: Project, op: str, input_uids: list[str], params: dict | None = None, *,
-          name: str, replace: bool = False):
+          name: str, replace: bool = False, supersedes: str | None = None):
     """Run ``op`` and add its result to the project.
 
     With ``replace`` (single-input operations only) the result becomes a new version of the
-    input layer: it takes the layer's place, and the input stays in the history.
+    input layer: it takes the layer's place, and the input stays in the history. ``supersedes``
+    names another object the result is a new version of (an edited table, say).
     """
     params = dict(params or {})
     if replace and (op not in REPLACEABLE or len(input_uids) != 1):
         raise OperationError(f"'{op}' cannot replace its input; it makes a new layer")
     out = _run(project, op, input_uids, params)
-    supersedes = input_uids[0] if replace else None
+    supersedes = input_uids[0] if replace else supersedes
     item = _build(out, uid=new_uid(), name=name,
                   derivation=Derivation.make(op, input_uids, params, supersedes=supersedes))
     if isinstance(item, Surface) and item.n_valid == 0:
