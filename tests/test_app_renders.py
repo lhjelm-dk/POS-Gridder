@@ -165,3 +165,24 @@ def test_hcwc_and_pos_workflow():
     assert not at.exception, at.exception
     (pv,) = [proj.objects[u] for u in proj.current("pctvol")]
     assert pv.summary["grv_P10_1e6m3"] > pv.summary["grv_P90_1e6m3"] > 0
+
+
+def test_contour_workflow():
+    """Example → contour → select (as the map would) and delete → surface from the contours."""
+    at = _app()
+    _button(at, "Load example project").click().run()
+    _button(at, "Contour").click().run()
+    assert not at.exception, at.exception
+    proj = at.session_state["project"]
+    (cs_uid,) = proj.current("contours")
+    at.session_state["contour_selection"] = {cs_uid: [0, 1]}
+    at.run()
+    _button(at, "Delete selected").click().run()
+    assert not at.exception, at.exception
+    (new_uid,) = proj.current("contours")
+    assert new_uid != cs_uid and proj.objects[new_uid].deleted[:2].all()
+    _button(at, "Make surface").click().run()
+    assert not at.exception, at.exception
+    made = proj.objects[proj.current("surface")[-1]]
+    assert made.derivation.operation == "contours_to_surface"
+    assert made.derivation.params["method"] == "tps"

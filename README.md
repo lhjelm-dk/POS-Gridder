@@ -6,7 +6,7 @@ closure and spill interpretation, area–depth and GRV, contact distributions fr
 POS mapped as a function of depth, and area/GRV across the contact percentiles. Every layer
 records how it was made and can be recomputed from the imported files.
 
-**Status:** Phases 1–3 of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
+**Status:** Phases 1–4 of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
 [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md)):
 - import with a declared domain and sign;
 - immutable layers with provenance, version history and stale flags;
@@ -24,10 +24,15 @@ records how it was made and can be recomputed from the imported files.
   fill depth, with every non-POS region labelled;
 - typed depth→POS curves;
 - area and GRV at each contact percentile;
-- JSON result reports.
+- JSON result reports;
+- contour sets made from a surface or imported (GeoPackage, GeoJSON, zipped Shapefile, ASCII);
+- line selection by box or lasso on the map or from a table, with delete and restore;
+- surfaces made from contours by thin-plate spline (the default, chosen by the benchmark in
+  `docs/BENCHMARK.md`) or linear TIN, as a new layer or a new version of the source surface;
+- outlines from closed contours, and GeoPackage export.
 
 An example project (Project tab) makes a synthetic two-dome surface for trying the workflow.
-The contour workflow comes next.
+Phase 5 (hardening) is next.
 
 ## Run
 
@@ -53,7 +58,7 @@ subset CI runs on pull requests.
 | ZMAP+ ASCII | ✓ | ✓ | own reader (honours the header's null value) |
 
 v1 keeps to ZMAP+ for grids (decision D8). The IRAP bridge from Phase 0 is in `archive/`.
-Contour import (GeoPackage, Shapefile, GeoJSON, ASCII) arrives with the contour phase.
+Contour lines: GeoPackage, GeoJSON, zipped Shapefile and ASCII `x y z id` in; GeoPackage out.
 
 ## Conventions
 

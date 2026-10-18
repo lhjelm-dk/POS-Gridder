@@ -735,6 +735,17 @@ compared with the analytic answers.
 realistic structure between contours. Otherwise linear TIN, which honours the contours and never
 overshoots. The benchmark report is kept in `docs/` and re-run in CI.
 
+**Result (Phase 4, `docs/BENCHMARK.md`):** the thin-plate spline meets every threshold in every
+case at Δ = 10 and 25 m and is the default.
+
+- Linear TIN fails on the two-dome case. Its flat top puts the crest a full interval deep; at
+  10 m the GRV is −4.7 % and the maximum depth error exceeds Δ/2; at 25 m the area at the first
+  contoured level comes out as zero.
+- On the GEUS grid, depth-converted, contoured at 10 m and regridded by the spline, the main
+  closure is reproduced against the original grid: crest within 0.2 m, spill identical, area
+  −0.3 %, GRV −0.05 %. TIN puts the spill on the contour level (5 m shallow) and loses 6 % of the
+  GRV.
+
 ### 7.3 Hand-checked geological examples
 
 - A small synthetic prospect (e.g. 9 × 9 nodes) with hand-computed crest, spill, footprint area,
@@ -765,7 +776,7 @@ overshoots. The benchmark report is kept in `docs/` and re-run in CI.
 | **1. Data integrity** ✅ done 2026-10-09 | Safe inputs and traceability | Phase 0 retrofits (§6.3); Source/derivation/version model; depth conversion; domain-checked arithmetic; explicit resampling; project save/load | F | T1–T4, T22, T23 | Model over-design | Formats beyond ZMAP+ |
 | **2. Closure and volumes** ✅ done 2026-10-09 | Correct trap geometry and GRV | Priority-flood `s`, candidates, confirmation records, boundary types; area–depth (sub-cell); GRV via three routes with cross-check; outline clipping; Builder/SCOPE-HC area–depth export | 1 | T5–T13, T24; the hand-checked prospect | Saddle and edge cases; convergence | Faults |
 | **3. HCWC and POS** ✅ done 2026-10-09 | The core probability output | CSV import with validation and the table editor; basis, conditioning and multiplier inputs; anchoring (default as is); POS maps for both events with categories; percentile area/GRV; typed depth→POS curves (total or conditional); Builder area–depth import; results report | 2 | T14–T20, T25–T27; crest POS = Builder Prospect POS on a real export | Semantics (C1–C3) | DHI basis (if deferred) |
-| **4. Contour workflow** | Contour-first parity | Contour import (GeoPackage/Shapefile/GeoJSON, ASCII x y z id); select → delete; contours → surface (TIN and TPS) as reconciliation; benchmark report; stale propagation into phases 2–3 | 2 (needs 3 for the full POS chain) | T21 plus GEUS self-consistency; D9 thresholds met | Crest extrapolation (C7); selection UX | More gridders, digitising |
+| **4. Contour workflow** ✅ done 2026-10-18 | Contour-first parity | Contour import (GeoPackage/Shapefile/GeoJSON, ASCII x y z id); select → delete; contours → surface (TIN and TPS) as reconciliation; benchmark report; stale propagation into phases 2–3 | 2 (needs 3 for the full POS chain) | T21 plus GEUS self-consistency; D9 thresholds met | Crest extrapolation (C7); selection UX | More gridders, digitising |
 | **5. Hardening** | v1 release | Warnings review, worked-example documentation, performance on the GEUS grid, user test on a real prospect | 1–4 | A real-prospect run reproduced from the saved project | – | All of §4.2 |
 
 Phase 4 could run in parallel with phase 3 after phase 2. It is sequenced after phase 3 only

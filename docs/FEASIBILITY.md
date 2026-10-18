@@ -188,5 +188,6 @@ Low (spill-limited example)", and `min_column_input` (100) differs from `resolve
 ## Open items from this phase
 
 - **Manual check (1 minute):** single click and lasso on contour lines in the F2 prototype:
-  `streamlit run feasibility/f2_line_selection.py`.
+  `streamlit run feasibility/f2_line_selection.py`. Box selection was confirmed again in the
+  real app in Phase 4 (tab 6.0: a box returned two lines, which were then deleted).
 - **Builder example-file inconsistency** (`resolved` vs `inputs`), to be fixed in HCWC Builder.

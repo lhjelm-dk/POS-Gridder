@@ -110,3 +110,50 @@ def pos_figure(m, *, height: int = 600, title: str | None = None) -> go.Figure:
                     bgcolor="rgba(30,27,22,0.6)", font=dict(color="#ffffff")),
         plot_bgcolor="#ffffff")
     return fig
+
+
+# --------------------------------------------------------------------------- contour sets
+def contour_figure(cs, *, background=None, selected=(), height: int = 620) -> go.Figure:
+    """Active lines solid, deleted lines dashed grey, selected lines orange.
+
+    Every vertex carries an invisible marker with its line number in ``customdata``, so a box or
+    lasso selection returns line numbers (feasibility F2: line-only traces are not selectable).
+    """
+    fig = surface_figure(background, height=height) if background is not None else go.Figure()
+    selected = set(int(k) for k in selected)
+
+    def trace(ids, name, color, dash, width):
+        xs, ys, cd, lv = [], [], [], []
+        for k in ids:
+            pts = cs.line(k)
+            xs += list(pts[:, 0]) + [None]
+            ys += list(pts[:, 1]) + [None]
+            cd += [k] * len(pts) + [None]
+            lv += [cs.levels[k]] * len(pts) + [None]
+        fig.add_trace(go.Scatter(
+            x=xs, y=ys, mode="lines+markers", name=name, customdata=cd,
+            line=dict(color=color, width=width, dash=dash),
+            marker=dict(size=5, color=color, opacity=0.0),
+            selected=dict(marker=dict(opacity=0.0)), unselected=dict(marker=dict(opacity=0.0)),
+            text=[f"{v:g}" if v is not None else None for v in lv],
+            hovertemplate="Level %{text}<br>line %{customdata}<extra></extra>"))
+
+    active = [k for k in cs.active() if k not in selected]
+    gone = [k for k in range(cs.n_lines) if cs.deleted[k] and k not in selected]
+    sel = sorted(selected)
+    if active:
+        trace(active, "Contours", "#ffffff" if background is not None else SERIES[0], "solid", 1.5)
+    if gone:
+        trace(gone, "Deleted", "#8c8a82", "dot", 1.2)
+    if sel:
+        trace(sel, "Selected", SERIES[1], "solid", 3)
+    if background is None:
+        fig.update_layout(
+            height=height, margin=dict(l=10, r=10, t=30, b=10), plot_bgcolor="#ffffff",
+            xaxis=dict(title="X (m)", tickformat="d", showgrid=False),
+            yaxis=dict(title="Y (m)", tickformat="d", showgrid=False, scaleanchor="x",
+                       scaleratio=1),
+            legend=dict(x=0.01, y=0.99, xanchor="left", yanchor="top",
+                        bgcolor="rgba(30,27,22,0.6)", font=dict(color="#ffffff")))
+    fig.update_layout(title=dict(text=cs.name, font=dict(size=14)), dragmode="select")
+    return fig

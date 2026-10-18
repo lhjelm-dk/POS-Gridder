@@ -509,6 +509,129 @@ def _area_depth_import(ctx, inputs, params) -> Fields:
         raise OperationError(str(exc)) from None
 
 
+# --------------------------------------------------------------------------- contours
+@operation("contour")
+def _contour(ctx, inputs, params) -> Fields:
+    """Contour lines of a surface at a regular interval (contourpy, linear between nodes)."""
+    from posgridder.core.contours import ContourSet, contour_levels, contour_surface
+
+    (surface,) = inputs
+    st = surface.stats()
+    try:
+        levels = contour_levels(st["min"], st["max"], float(params["interval"]),
+                                params.get("start"), params.get("stop"))
+        fields = contour_surface(surface, levels)
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    unit = f" {surface.unit}" if surface.unit else ""
+    origin = (f"derived from '{surface.name}' every {params['interval']:g}{unit}"
+              f" ({len(levels)} levels, {levels[0]:g} to {levels[-1]:g}{unit})")
+    return Fields(ContourSet, dict(domain=surface.domain, origin=origin, source_uid=surface.uid,
+                                   crs=surface.crs, **fields))
+
+
+@operation("contour_import")
+def _contour_import(ctx, inputs, params) -> Fields:
+    """Contour lines from a vector or ASCII file; the level from an attribute or from Z."""
+    from posgridder.core.contours import ContourSet, pack
+    from posgridder.io.vectors import read_contours
+
+    (source,) = inputs
+    data, filename = _source(ctx, source)
+    try:
+        lines, levels, warnings = read_contours(data, filename, params.get("level_field"))
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    if params.get("flip_sign"):
+        levels = [-v for v in levels]
+    if params["domain"] in ("depth", "time") and np.mean(np.asarray(levels) < 0) > 0.5:
+        warnings.append("most levels are negative; depth and time are stored positive down, so "
+                        "the sign probably needs flipping on import")
+    field = params.get("level_field") or "Z"
+    origin = f"imported from {filename} (level from {field})" + \
+        (", sign flipped" if params.get("flip_sign") else "")
+    return Fields(ContourSet, dict(domain=params["domain"], origin=origin, source_uid=None,
+                                   crs=params.get("crs"), warnings=tuple(warnings),
+                                   **pack(lines, levels)))
+
+
+@operation("contour_edit", replaceable=True)
+def _contour_edit(ctx, inputs, params) -> Fields:
+    """Lines marked deleted or restored. The lines stay in the set; nothing is removed."""
+    from posgridder.core.contours import ContourSet
+
+    (cs,) = inputs
+    ids = [int(k) for k in params.get("delete", [])] + [int(k) for k in params.get("restore", [])]
+    if any(not 0 <= k < cs.n_lines for k in ids):
+        raise OperationError("a line number is outside the set")
+    flags = cs.with_deleted(params.get("delete", []), params.get("restore", []))
+    if not (~flags).any():
+        raise OperationError("deleting every line leaves nothing to grid")
+    return Fields(ContourSet, dict(coords=cs.coords, offsets=cs.offsets, levels=cs.levels,
+                                   deleted=flags, domain=cs.domain, origin=cs.origin,
+                                   source_uid=cs.source_uid, crs=cs.crs, warnings=cs.warnings))
+
+
+@operation("contours_to_surface")
+def _contours_to_surface(ctx, inputs, params) -> Output:
+    """A surface from the active lines of a contour set, by a declared method (plan §5.4).
+
+    The grid is the nodes of a template surface (``roles`` names it ``template``) or
+    ``params['geometry']``. Crest points, (x, y, z), are added to the data if given.
+    """
+    from posgridder.core.contours import TPS_NEIGHBOURS, data_points, grid_from_points
+
+    roles = dict(zip(params.get("roles", ["contours"]), inputs))
+    cs = roles["contours"]
+    if "template" in roles:
+        t = roles["template"]
+        if abs(t.xinc - t.yinc) > 1e-9 * t.xinc:
+            raise OperationError("the template grid has unequal X and Y increments")
+        geometry = {"xori": t.xori, "yori": t.yori, "inc": t.xinc, "ncol": t.ncol,
+                    "nrow": t.nrow}
+    else:
+        geometry = params["geometry"]
+    try:
+        points = data_points(cs, float(params.get("spacing") or geometry["inc"]),
+                             params.get("crest_points", []))
+        z, report = grid_from_points(points, geometry, params["method"],
+                                     int(params.get("neighbors", TPS_NEIGHBOURS)))
+    except ValueError as exc:
+        raise OperationError(str(exc)) from None
+    warnings = []
+    if report["overshoot_shallow_m"] > 0:
+        warnings.append(f"The surface rises {report['overshoot_shallow_m']:.2f} m above the "
+                        "shallowest contour (or crest point): extrapolated relief.")
+    if report["overshoot_deep_m"] > 0:
+        warnings.append(f"The surface falls {report['overshoot_deep_m']:.2f} m below the deepest "
+                        "contour.")
+    if not params.get("crest_points"):
+        warnings.append("No crest point was given: inside the innermost contour the "
+                        + ("TIN is flat at that level." if params["method"] == "tin" else
+                           "spline extrapolates the crest."))
+    if "template" in roles and params.get("template_nulls", True):
+        # The data hull bridges gaps and concave edges; the template says where data ends.
+        held = ~np.ma.getmaskarray(z) & np.ma.getmaskarray(roles["template"].values)
+        if held.any():
+            warnings.append(f"{int(held.sum()):,} nodes inside the contours' hull are null in the "
+                            "template and are kept null.")
+        z = np.ma.MaskedArray(np.ma.getdata(z), mask=np.ma.getmaskarray(z)
+                              | np.ma.getmaskarray(roles["template"].values))
+    return Output(z, cs.domain, (geometry["xori"], geometry["yori"], geometry["inc"],
+                                 geometry["inc"]), cs.crs, warnings)
+
+
+@operation("outline_from_contour")
+def _outline_from_contour(ctx, inputs, params) -> Fields:
+    from posgridder.core.outline import Outline
+
+    (cs,) = inputs
+    k = int(params["line"])
+    if not 0 <= k < cs.n_lines or not cs.closed(k):
+        raise OperationError("only a closed contour line makes an outline")
+    return Fields(Outline, dict(coords=np.asarray(cs.line(k))[:-1], crs=cs.crs))
+
+
 # --------------------------------------------------------------------------- running
 def _run(project: Project, op: str, input_uids: list[str], params: dict):
     if op not in OPERATIONS:
