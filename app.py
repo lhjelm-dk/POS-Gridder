@@ -11,10 +11,11 @@ import streamlit as st
 
 from posgridder.io import autosave
 from posgridder.ui import (closure_tab, contours_tab, pos_tab, progress, sidebar, start_tab,
-                           surfaces_tab, volumes_tab)
+                           surfaces_tab, theme, volumes_tab)
 from posgridder.ui.state import project, show_notices
 
 st.set_page_config(page_title="POS-Gridder", page_icon=":material/layers:", layout="wide")
+theme.apply()
 
 st.title("POS-Gridder")
 st.caption("*by Lars Hjelm* · Surfaces, contours and spatial chance of success")
@@ -26,9 +27,7 @@ with st.container():
     progress.render()
     show_notices()
 
-start, surfaces, contours, closure, volumes, contacts, results = st.tabs(
-    ["1 Start", "2 Surfaces", "3 Contours", "4 Closure", "5 Volumes", "6 Contacts",
-     "7 POS & results"])
+start, surfaces, contours, closure, volumes, contacts, results = st.tabs(theme.tab_labels())
 with start:
     start_tab.render()
 with surfaces:
