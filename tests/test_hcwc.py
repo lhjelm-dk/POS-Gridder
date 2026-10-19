@@ -122,3 +122,22 @@ def test_pasted_table():
     validate_table(p, d)
     with pytest.raises(TableError, match="line"):
         parse_pasted("100 2100\n50 x\n0 2200")
+
+
+
+def test_builder_spill_is_compared(project):
+    """C5: the spill typed in the Builder prospect against the confirmed map spill."""
+    from tests.test_pos import dome
+
+    top, closure = dome(project, crest=2050.0)                  # spills at the edge, 2275 m
+    dist = import_hcwc(project, name="builder", basis="geological", conditioning="h_min",
+                       tails="truncated", f_hmin=0.8891, h_min=120.0,
+                       csv=("hcwc_percentiles_geological.csv",
+                            (FIX / "hcwc_percentiles_geological.csv").read_bytes()),
+                       json=("example.hcwc.json",
+                             (FIX / "example_prospect_spill.hcwc.json").read_bytes()))
+    assert dist.builder_spill == 2200.0
+    from posgridder.core.operations import apply
+    m = apply(project, "pos_map", [closure.uid, top.uid, dist.uid],
+              {"roles": ["closure", "top", "hcwc"], "event": "a"}, name="m")
+    assert any("differs from the spill in the Builder prospect" in w for w in m.warnings)

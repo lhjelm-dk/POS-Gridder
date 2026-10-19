@@ -379,7 +379,9 @@ def interpret(surface: Surface, *, crest: tuple[int, int], connectivity: int = 8
     accepted = set(choice.get("accept", []))
     assumptions = [f"Single fill point at the crest ({z[crest]:.1f} m); a sub-culmination fills "
                    "only through its connection to the crest.",
-                   f"{connectivity}-connected grid nodes."]
+                   f"{connectivity}-connected grid nodes.",
+                   "Faults are not represented: a fault-dependent closure needs a manual spill "
+                   "depth with its reason."]
     if "manual" in choice:
         spill = float(choice["manual"])
         reason = str(choice.get("reason", "")).strip()

@@ -777,12 +777,30 @@ case at Δ = 10 and 25 m and is the default.
 | **2. Closure and volumes** ✅ done 2026-10-09 | Correct trap geometry and GRV | Priority-flood `s`, candidates, confirmation records, boundary types; area–depth (sub-cell); GRV via three routes with cross-check; outline clipping; Builder/SCOPE-HC area–depth export | 1 | T5–T13, T24; the hand-checked prospect | Saddle and edge cases; convergence | Faults |
 | **3. HCWC and POS** ✅ done 2026-10-09 | The core probability output | CSV import with validation and the table editor; basis, conditioning and multiplier inputs; anchoring (default as is); POS maps for both events with categories; percentile area/GRV; typed depth→POS curves (total or conditional); Builder area–depth import; results report | 2 | T14–T20, T25–T27; crest POS = Builder Prospect POS on a real export | Semantics (C1–C3) | DHI basis (if deferred) |
 | **4. Contour workflow** ✅ done 2026-10-18 | Contour-first parity | Contour import (GeoPackage/Shapefile/GeoJSON, ASCII x y z id); select → delete; contours → surface (TIN and TPS) as reconciliation; benchmark report; stale propagation into phases 2–3 | 2 (needs 3 for the full POS chain) | T21 plus GEUS self-consistency; D9 thresholds met | Crest extrapolation (C7); selection UX | More gridders, digitising |
-| **5. Hardening** | v1 release | Warnings review, worked-example documentation, performance on the GEUS grid, user test on a real prospect | 1–4 | A real-prospect run reproduced from the saved project | – | All of §4.2 |
+| **5. Hardening** ✅ done 2026-10-19 (v1, 0.2.0) | v1 release | Warnings review, worked-example documentation, performance on the GEUS grid, user test on a real prospect | 1–4 | A real-prospect run reproduced from the saved project | – | All of §4.2 |
 
 Phase 4 could run in parallel with phase 3 after phase 2. It is sequenced after phase 3 only
 because the full end-to-end check of the contour-first path needs POS.
 
 ---
+
+## 8a. Status after Phase 5 (2026-10-19)
+
+v1 is complete as planned: phases F and 1–5 are done; 132 tests pass. Phase 5 delivered:
+- `docs/PERFORMANCE.md`: every interactive step is under 0.2 s on the GEUS grid; the spline
+  regrid and the replay check take about 11 s each.
+- `docs/SAFEGUARDS.md`: every review finding mapped to what the app does and the test that
+  holds it. The review closed three gaps: the Builder spill compared with the map spill (C5),
+  CRS refusal for contours and outlines (C20), and faults stated as absent (C17).
+- `docs/WORKED_EXAMPLE.md`, plus the house-style text review (no bold object names).
+- The acceptance run on real data (`tests/test_acceptance.py`): the GEUS grid with the real
+  Builder export, through every tab, saved, reopened and reproduced exactly.
+- Version 0.2.0. Project files from 0.1 still load; the replay check names the version that
+  made each object.
+
+Still outstanding is an **external comparison on one of the user's own prospects**, with an
+area–depth table or GRV from GeoX, Petrel or a spreadsheet (§7.4). It needs data that is not
+in the repository.
 
 ## 9. Decisions and remaining open items
 

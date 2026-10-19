@@ -159,6 +159,18 @@ def anchoring_shift(dist, crest_depth: float, anchoring: str) -> tuple[float, li
     return 0.0, assumptions, warnings
 
 
+def spill_check(dist, spill_depth: float, shift: float) -> list[str]:
+    """C5: the Builder's own spill (if known) against the confirmed map spill."""
+    if dist.builder_spill is None:
+        return []
+    builder = dist.builder_spill + shift
+    if abs(builder - spill_depth) <= ANCHOR_WARNING_M:
+        return []
+    return [f"The map spill ({spill_depth:.1f} m) differs from the spill in the Builder prospect "
+            f"({builder:.1f} m{', after the shift' if shift else ''}) by "
+            f"{spill_depth - builder:+.1f} m; the contact distribution was built for the other."]
+
+
 def _band_top(dist, crest_depth: float, shift: float) -> float:
     """apex + h_min in map depths: contacts shallower than this are columns below the minimum."""
     apex = dist.apex + shift if dist.apex is not None else crest_depth
@@ -178,6 +190,9 @@ def pos_map(closure, top, *, dist=None, curve=None, event: str = "a", anchoring:
     category = np.full(z.shape, 4, dtype=np.int8)
     category[~valid] = 0
     inside = footprint.copy()
+    if outline is not None and outline.crs and top.crs and outline.crs != top.crs:
+        raise ValueError(f"the outline states {outline.crs} and the surface {top.crs}; no "
+                         "reprojection is done in v1")
     if outline is not None:
         within = outline.contains_nodes(top.x, top.y)
         category[footprint & ~within] = 5
@@ -212,7 +227,7 @@ def pos_map(closure, top, *, dist=None, curve=None, event: str = "a", anchoring:
             raise ValueError("P(G) is needed: typed, or from a .hcwc.json on the geological basis")
         shift, a_lines, w_lines = anchoring_shift(dist, closure.crest_depth, anchoring)
         assumptions += a_lines
-        warnings += w_lines
+        warnings += w_lines + spill_check(dist, closure.spill_depth, shift)
         e = dist.exceedance(shift)
         sv = s[inside]
         if dist.conditioning == "h_min":
@@ -284,6 +299,7 @@ def percentile_volumes(volumes, dist, *, anchoring: str = "as_is") -> dict:
     crest = volumes.summary["crest_depth_m"]
     spill = volumes.summary["spill_depth_m"]
     shift, assumptions, warnings = anchoring_shift(dist, crest, anchoring)
+    warnings = warnings + spill_check(dist, spill, shift)
     contacts = np.asarray(dist.depths) + shift
     used = np.minimum(contacts, spill)
     table = pd.DataFrame({

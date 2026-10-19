@@ -174,6 +174,8 @@ def parse_hcwc_json(data: bytes) -> dict:
         out["h_min"] = float(inputs["min_column_input"])
     if "apex_p1" in inputs and "apex_p99" in inputs:
         out["apex"] = 0.5 * (float(inputs["apex_p1"]) + float(inputs["apex_p99"]))
+    if "spill_input" in inputs:
+        out["spill"] = float(inputs["spill_input"])
     out["dhi"] = bool(inputs.get("dhi_toggle", False))
     return out
 
@@ -195,6 +197,7 @@ class ContactDistribution:
     f_hmin: float | None = None
     h_min: float | None = None
     apex: float | None = None
+    builder_spill: float | None = None     # the spill depth typed in the Builder, if known
     origin: str = ""
     sources: tuple[str, ...] = ()          # where each multiplier input came from, in words
     warnings: tuple[str, ...] = ()
@@ -221,14 +224,17 @@ class ContactDistribution:
     def content_hash(self) -> str:
         return hash_parts(self.percentiles, self.depths, self.basis, self.conditioning, self.tails,
                           self.p_g, self.f_hmin, self.h_min, self.apex, self.origin,
-                          list(self.sources))
+                          list(self.sources),
+                          # Only when set, so distributions saved before the field existed
+                          # keep their hash and their project files still load.
+                          *([self.builder_spill] if self.builder_spill is not None else []))
 
     def renamed(self, name: str) -> "ContactDistribution":
         return replace(self, name=name)
 
     def to_record(self):
         meta = {k: getattr(self, k) for k in ("basis", "conditioning", "tails", "p_g", "f_hmin",
-                                              "h_min", "apex", "origin")}
+                                              "h_min", "apex", "builder_spill", "origin")}
         meta["sources"] = list(self.sources)
         return meta, {"percentiles": self.percentiles, "depths": self.depths}
 

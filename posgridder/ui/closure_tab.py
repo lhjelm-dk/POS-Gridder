@@ -141,7 +141,7 @@ def _interpretation(surface, crest, connectivity: int, min_height: float) -> Non
         except ProjectError as exc:
             notify("error", str(exc))
         else:
-            notify("success", f"Confirmed **{closure.name}**: crest {closure.crest_depth:.1f} m, "
+            notify("success", f"Confirmed ‘{closure.name}’: crest {closure.crest_depth:.1f} m, "
                               f"spill {closure.spill_depth:.1f} m ({closure.spill_type}).")
         st.rerun()
 
@@ -165,7 +165,7 @@ def _confirmed_section() -> None:
     name = st.selectbox("Closure", [proj.objects[u].name for u in uids], key="closure_view")
     c = proj.objects[uid_of(name)]
     for reason in proj.stale_reasons(c.uid):
-        st.warning(f"**Stale.** {reason}.", icon=":material/history:")
+        st.warning(f"Stale: {reason}.", icon=":material/history:")
     with st.container(horizontal=True):
         if proj.is_stale(c.uid) and st.button("Recalculate", icon=":material/refresh:",
                                               key="closure_recalc"):
@@ -178,7 +178,7 @@ def _confirmed_section() -> None:
         if st.button("Remove", icon=":material/delete:", key="closure_remove"):
             proj.remove(c.uid)
             st.rerun()
-    st.markdown("**Assumptions**\n" + "\n".join(f"- {a}" for a in c.assumptions))
+    st.markdown("Assumptions:\n\n" + "\n".join(f"- {a}" for a in c.assumptions))
     for w in c.warnings:
         st.warning(w, icon=":material/warning:")
 

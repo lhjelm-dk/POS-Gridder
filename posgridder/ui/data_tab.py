@@ -17,7 +17,7 @@ def _stale_panel(uid: str) -> None:
     if not reasons:
         return
     with st.container(border=True):
-        st.warning("**Stale.** " + "; ".join(reasons) + ". The layer still shows the values made "
+        st.warning("Stale: " + "; ".join(reasons) + ". The layer still shows the values made "
                    "from the earlier inputs.", icon=":material/history:")
         if st.button("Recalculate from the newest inputs", icon=":material/refresh:",
                      key="recalculate"):

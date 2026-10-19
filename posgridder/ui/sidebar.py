@@ -50,7 +50,7 @@ def _import_form() -> None:
                 notify("error", f"{upload.name}: {exc}")
                 continue
             select(surface.uid)
-            notify("success", f"Imported **{surface.name}** as {domain}.")
+            notify("success", f"Imported ‘{surface.name}’ as {domain}.")
             for w in surface.warnings:
                 notify("warning", f"{surface.name}: {w}")
     st.rerun()

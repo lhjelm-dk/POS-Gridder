@@ -50,7 +50,7 @@ def _make_form() -> None:
             cs = apply(proj, "contour", [uid_of(name)], params,
                        name=f"{name} contours {interval:g}")
             st.session_state["_pending_cs"] = cs.name
-            notify("success", f"Made **{cs.name}**: {cs.n_lines} lines.")
+            notify("success", f"Made ‘{cs.name}’: {cs.n_lines} lines.")
         except ProjectError as exc:
             notify("error", str(exc))
         st.rerun()
@@ -99,7 +99,7 @@ def _import_form() -> None:
                        {"level_field": None if level == Z_LEVEL else level, "domain": domain,
                         "flip_sign": flip, "crs": crs.strip() or None}, name=name)
             st.session_state["_pending_cs"] = cs.name
-            notify("success", f"Imported **{cs.name}**: {cs.n_lines} lines.")
+            notify("success", f"Imported ‘{cs.name}’: {cs.n_lines} lines.")
             for w in cs.warnings:
                 notify("warning", w)
         except ProjectError as exc:
@@ -116,7 +116,7 @@ def _edit(cs, delete=(), restore=()) -> None:
               name=cs.name, replace=True)
         st.session_state.pop("contour_selection", None)
         notify("success", f"{len(delete)} lines deleted, {len(restore)} restored: a new version "
-                          f"of **{cs.name}**.")
+                          f"of ‘{cs.name}’.")
     except ProjectError as exc:
         notify("error", str(exc))
     st.rerun()
@@ -125,7 +125,7 @@ def _edit(cs, delete=(), restore=()) -> None:
 def _view(cs) -> None:
     proj = project()
     for reason in proj.stale_reasons(cs.uid):
-        st.warning(f"**Stale.** {reason}.", icon=":material/history:")
+        st.warning(f"Stale: {reason}.", icon=":material/history:")
     if proj.is_stale(cs.uid) and st.button("Recalculate", icon=":material/refresh:",
                                            key="cs_recalc"):
         try:
@@ -178,7 +178,7 @@ def _view(cs) -> None:
             try:
                 o = apply(proj, "outline_from_contour", [cs.uid], {"line": closed[0]},
                           name=f"{cs.name} line {closed[0]}")
-                notify("success", f"Made the outline **{o.name}** ({o.area_km2:.3f} km²).")
+                notify("success", f"Made the outline ‘{o.name}’ ({o.area_km2:.3f} km²).")
             except ProjectError as exc:
                 notify("error", str(exc))
             st.rerun()
@@ -231,11 +231,13 @@ def _reconcile(cs) -> None:
         else:
             params["roles"] = ["contours", "template"]
             inputs.append(uid_of(template))
-        surface = apply(proj, "contours_to_surface", inputs, params,
-                        name=source.name if replace_source else name,
-                        supersedes=source.uid if replace_source else None)
+        with st.spinner("Interpolating; a thin-plate spline on a large grid takes some "
+                        "seconds…"):
+            surface = apply(proj, "contours_to_surface", inputs, params,
+                            name=source.name if replace_source else name,
+                            supersedes=source.uid if replace_source else None)
         select(surface.uid)
-        notify("success", f"Made **{surface.name}** ({METHODS[method].split(' (')[0]}).")
+        notify("success", f"Made ‘{surface.name}’ ({METHODS[method].split(' (')[0]}).")
         for w in surface.warnings:
             notify("warning", w)
     except (ValueError, ProjectError) as exc:

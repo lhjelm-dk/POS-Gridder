@@ -160,6 +160,9 @@ def compute(closure, top, *, geometry: str, base=None, thickness_surface=None,
     use = footprint & ~base_null
 
     clip = None
+    if outline is not None and outline.crs and top.crs and outline.crs != top.crs:
+        raise ValueError(f"the outline states {outline.crs} and the surface {top.crs}; no "
+                         "reprojection is done in v1")
     if outline is not None:
         inside = outline.contains_nodes(top.x, top.y)
         cut = int((use & ~inside).sum())

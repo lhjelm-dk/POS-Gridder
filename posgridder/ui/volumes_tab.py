@@ -71,7 +71,7 @@ def _calculate_form() -> None:
         notify("error", str(exc))
     else:
         st.session_state["_pending_volume"] = result.name
-        notify("success", f"Calculated **{result.name}**.")
+        notify("success", f"Calculated ‘{result.name}’.")
     st.rerun()
 
 
@@ -94,7 +94,7 @@ def _outlines() -> None:
                 crs = proj.objects[surfaces[0]].crs if surfaces else None
                 apply(proj, "outline_points", [], {"coords": coords.tolist(), "crs": crs},
                       name=name)
-                notify("success", f"Added the outline **{name}**.")
+                notify("success", f"Added the outline ‘{name}’.")
             except (ValueError, ProjectError) as exc:
                 notify("error", f"Outline not added: {exc}")
             st.rerun()
@@ -106,7 +106,7 @@ def _outlines() -> None:
                     try:
                         o = apply(proj, "outline_from_closure", [uid_of(c_name)],
                                   name=f"{c_name} outline")
-                        notify("success", f"Made **{o.name}** ({o.area_km2:.2f} km²).")
+                        notify("success", f"Made ‘{o.name}’ ({o.area_km2:.2f} km²).")
                     except ProjectError as exc:
                         notify("error", str(exc))
                     st.rerun()
@@ -132,7 +132,7 @@ def _results() -> None:
     name = st.selectbox("Result", names, key="volume_view")
     v = proj.objects[uid_of(name)]
     for reason in proj.stale_reasons(v.uid):
-        st.warning(f"**Stale.** {reason}.", icon=":material/history:")
+        st.warning(f"Stale: {reason}.", icon=":material/history:")
     if proj.is_stale(v.uid) and st.button("Recalculate", icon=":material/refresh:",
                                           key="vol_recalc"):
         try:
@@ -154,7 +154,7 @@ def _results() -> None:
                   border=True)
     for w in v.warnings:
         st.warning(w, icon=":material/warning:")
-    st.markdown("**Assumptions**\n" + "\n".join(f"- {a}" for a in v.assumptions))
+    st.markdown("Assumptions:\n\n" + "\n".join(f"- {a}" for a in v.assumptions))
 
     left, right = st.columns(2)
     with left:

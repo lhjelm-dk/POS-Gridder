@@ -411,7 +411,9 @@ def _hcwc(ctx, inputs: list, params) -> Fields:
             d = -d
             origin += ", sign flipped"
         values = {k: params.get(k) for k in ("p_g", "f_hmin", "h_min", "apex")}
-        for k in values:
+        typed = list(values)
+        values["builder_spill"] = None
+        for k in typed:
             if values[k] is not None:
                 sources.append(f"{k} = {values[k]:g} typed")
         if "json" in roles:
@@ -432,6 +434,9 @@ def _hcwc(ctx, inputs: list, params) -> Fields:
                 values["apex"] = info["apex"]
                 sources.append(f"apex = {info['apex']:.1f} m from {filename} inputs "
                                "(midpoint of its P1 and P99)")
+            if "spill" in info:
+                values["builder_spill"] = info["spill"]
+                sources.append(f"Builder spill = {info['spill']:g} m from {filename} inputs")
             if info.get("dhi") and params["basis"] == "geological":
                 warnings.append(f"{filename} has a DHI switched on; this table is declared "
                                 "geological.")
@@ -585,6 +590,9 @@ def _contours_to_surface(ctx, inputs, params) -> Output:
     cs = roles["contours"]
     if "template" in roles:
         t = roles["template"]
+        if cs.crs and t.crs and cs.crs != t.crs:
+            raise OperationError(f"the contours state {cs.crs} and the template {t.crs}; no "
+                                 "reprojection is done in v1")
         if abs(t.xinc - t.yinc) > 1e-9 * t.xinc:
             raise OperationError("the template grid has unequal X and Y increments")
         geometry = {"xori": t.xori, "yori": t.yori, "inc": t.xinc, "ncol": t.ncol,
@@ -694,6 +702,7 @@ class ReplayRow:
     name: str
     operation: str
     identical: bool
+    made_by: str = ""                   # app version that made the stored object
 
 
 def replay(project: Project) -> list[ReplayRow]:
@@ -707,5 +716,6 @@ def replay(project: Project) -> list[ReplayRow]:
         d = obj.derivation
         fresh = _build(_run(project, d.operation, list(d.inputs), d.params),
                        uid=uid, name=obj.name, derivation=d)
-        rows.append(ReplayRow(uid, obj.name, d.operation, fresh.content_hash == obj.content_hash))
+        rows.append(ReplayRow(uid, obj.name, d.operation, fresh.content_hash == obj.content_hash,
+                              d.app_version))
     return rows

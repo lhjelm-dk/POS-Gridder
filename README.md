@@ -6,7 +6,7 @@ closure and spill interpretation, area–depth and GRV, contact distributions fr
 POS mapped as a function of depth, and area/GRV across the contact percentiles. Every layer
 records how it was made and can be recomputed from the imported files.
 
-**Status:** Phases 1–4 of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
+**Status:** v1 complete (0.2.0), all phases of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
 [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md)):
 - import with a declared domain and sign;
 - immutable layers with provenance, version history and stale flags;
@@ -32,7 +32,14 @@ records how it was made and can be recomputed from the imported files.
 - outlines from closed contours, and GeoPackage export.
 
 An example project (Project tab) makes a synthetic two-dome surface for trying the workflow.
-Phase 5 (hardening) is next.
+The documents that go with v1:
+- [`docs/WORKED_EXAMPLE.md`](docs/WORKED_EXAMPLE.md) — the workflow step by step on real data,
+  with the numbers to expect;
+- [`docs/SAFEGUARDS.md`](docs/SAFEGUARDS.md) — every known way to get a plausible but wrong
+  answer, what the app does about it, and the test;
+- [`docs/BENCHMARK.md`](docs/BENCHMARK.md) — why the thin-plate spline is the default for
+  contours → surface;
+- [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — timings on a 51,646-node grid.
 
 ## Run
 

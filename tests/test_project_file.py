@@ -112,3 +112,19 @@ def test_all_kinds_round_trip_and_replay(project):
     assert loaded.objects[closure.uid].spill_depth == closure.spill_depth
     rows = replay(loaded)
     assert all(r.identical for r in rows), [(r.name, r.operation) for r in rows if not r.identical]
+
+
+def test_project_file_from_version_0_1_loads():
+    """A project saved by version 0.1 (Phase 4) still opens: every hash checks out."""
+    from pathlib import Path
+
+    blob = (Path(__file__).parent / "fixtures" / "project_v0_1_phase4.posgrid.zip").read_bytes()
+    loaded = project_file.load(blob)
+    kinds = {o.kind for o in loaded.objects.values()}
+    assert {"surface", "closure", "hcwc", "posmap", "contours"} <= kinds
+    rows = replay(loaded)
+    assert all(r.made_by == "0.1.0" for r in rows)
+    # Surfaces, contours and the distribution recompute exactly; the closure's recorded
+    # assumptions gained a line in 0.2 (faults), so it and the map made from it differ.
+    same = {r.operation: r.identical for r in rows}
+    assert same["import"] and same["contour"] and same["hcwc"]

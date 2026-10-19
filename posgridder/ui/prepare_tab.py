@@ -44,7 +44,7 @@ def _run(op: str, inputs: list[str], params: dict, name: str, replace: bool = Fa
     else:
         select(surface.uid)
         verb = "Replaced with a new version:" if replace else "Made"
-        notify("success", f"{verb} **{surface.name}** ({surface.domain}).")
+        notify("success", f"{verb} ‘{surface.name}’ ({surface.domain}).")
         for w in surface.warnings:
             notify("warning", f"{surface.name}: {w}")
     st.rerun()

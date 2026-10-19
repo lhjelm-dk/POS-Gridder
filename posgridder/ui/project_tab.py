@@ -57,17 +57,26 @@ def _replay() -> None:
              "node, with what the project holds.")
     if st.button("Run the replay check", icon=":material/fact_check:", disabled=not proj.objects):
         try:
-            rows = replay(proj)
+            with st.spinner("Recomputing every object from the source files…"):
+                rows = replay(proj)
         except ProjectError as exc:
             st.error(f"The replay stopped: {exc}", icon=":material/error:")
             return
+        from posgridder import __version__
+
         frame = pd.DataFrame([{"Object": r.name, "Operation": r.operation,
-                               "Identical": r.identical} for r in rows])
+                               "Identical": r.identical, "Made by version": r.made_by}
+                              for r in rows])
         if frame["Identical"].all():
             st.success(f"All {len(rows)} versions reproduce exactly.", icon=":material/check_circle:")
         else:
+            older = frame[~frame["Identical"] & (frame["Made by version"] != __version__)]
             st.error(f"{(~frame['Identical']).sum()} of {len(rows)} versions differ.",
                      icon=":material/error:")
+            if len(older) == (~frame["Identical"]).sum():
+                st.caption(f"Every difference is in an object made by an earlier version than "
+                           f"this one ({__version__}); the calculation or its recorded text has "
+                           "changed since. Recalculating such an object makes it current.")
         st.dataframe(frame, hide_index=True)
 
 

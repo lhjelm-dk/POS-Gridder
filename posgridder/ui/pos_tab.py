@@ -95,7 +95,7 @@ def _import_forms() -> None:
                                     json=(js.name, js.getvalue()) if js else None,
                                     flip_sign=flip, **meta)
                     st.session_state["_pending_hcwc"] = d.name
-                    notify("success", f"Imported **{d.name}**.")
+                    notify("success", f"Imported ‘{d.name}’.")
                 except (ProjectError, ValueError) as exc:
                     notify("error", str(exc))
             st.rerun()
@@ -120,7 +120,7 @@ def _import_forms() -> None:
                                        json=(js.name, js.getvalue()) if js else None,
                                        origin="pasted or typed table", **meta)
                     st.session_state["_pending_hcwc"] = dist.name
-                    notify("success", f"Added **{dist.name}**.")
+                    notify("success", f"Added ‘{dist.name}’.")
                 except (TableError, ProjectError, ValueError) as exc:
                     notify("error", str(exc))
             st.rerun()
@@ -129,7 +129,7 @@ def _import_forms() -> None:
 def _stale(uid: str, key: str) -> None:
     proj = project()
     for reason in proj.stale_reasons(uid):
-        st.warning(f"**Stale.** {reason}.", icon=":material/history:")
+        st.warning(f"Stale: {reason}.", icon=":material/history:")
     if proj.is_stale(uid) and st.button("Recalculate", icon=":material/refresh:", key=key):
         try:
             recalculate(proj, uid)
@@ -161,7 +161,7 @@ def _distribution_section() -> None:
             "—" if d.p_g is None else f"{d.p_g:.4f}",
             "—" if d.f_hmin is None else f"{d.f_hmin:.4f}",
             "—" if d.h_min is None else f"{d.h_min:g} m",
-            "—" if d.apex is None else f"{d.apex:.1f} m", len(d.depths), d.origin]}),
+            "—" if d.apex is None else f"{d.apex:.1f} m", str(len(d.depths)), d.origin]}),
             hide_index=True)
         if d.sources:
             st.caption("Where the values came from: " + "; ".join(d.sources) + ".")
@@ -202,7 +202,7 @@ def _distribution_section() -> None:
                           origin=f"edited from '{d.name}': {rows}")
             try:
                 apply(proj, "hcwc", inputs, params, name=d.name, supersedes=d.uid)
-                notify("success", f"Saved a new version of **{d.name}** ({len(changed)} rows "
+                notify("success", f"Saved a new version of ‘{d.name}’ ({len(changed)} rows "
                                   "changed). Maps made from the earlier one are now stale.")
             except ProjectError as exc:
                 notify("error", str(exc))
@@ -231,7 +231,7 @@ def _curves_section() -> None:
                 values = [float(r[1]) / 100.0 for r in rows]
                 c = apply(proj, "pos_curve", [], {"depths": depths, "values": values,
                                                   "meaning": meaning}, name=name)
-                notify("success", f"Added **{c.name}**.")
+                notify("success", f"Added ‘{c.name}’.")
             except (ValueError, IndexError, ProjectError) as exc:
                 notify("error", f"Curve not added: {exc}")
         st.rerun()
@@ -293,7 +293,7 @@ def _map_section() -> None:
                 m = apply(proj, "pos_map", inputs, params,
                           name=name.strip() or f"POS {label} · {src} · {closure}")
                 st.session_state["_pending_map"] = m.name
-                notify("success", f"Mapped **{m.name}**.")
+                notify("success", f"Mapped ‘{m.name}’.")
             except ProjectError as exc:
                 notify("error", str(exc))
             st.rerun()
@@ -327,7 +327,7 @@ def _map_section() -> None:
     st.plotly_chart(pos_figure(m), key="pos_map_chart")
     left, right = st.columns(2)
     with left:
-        st.markdown("**Assumptions**\n" + "\n".join(f"- {a}" for a in m.assumptions))
+        st.markdown("Assumptions:\n\n" + "\n".join(f"- {a}" for a in m.assumptions))
     with right:
         st.dataframe(pd.DataFrame([{"Region": k, "Area (km², node count)": round(v, 3)}
                                    for k, v in s["area_km2_by_category"].items() if v > 0]),
@@ -351,7 +351,7 @@ def _percentile_section() -> None:
         if ok and up is not None:
             try:
                 v = import_area_depth(proj, up.name, up.getvalue())
-                notify("success", f"Imported **{v.name}**.")
+                notify("success", f"Imported ‘{v.name}’.")
             except (ProjectError, ValueError) as exc:
                 notify("error", str(exc))
             st.rerun()
@@ -369,7 +369,7 @@ def _percentile_section() -> None:
                 pv = apply(proj, "percentile_volumes", [uid_of(vol), uid_of(dist)],
                            {"anchoring": anchoring}, name=f"{dist} on {vol}")
                 st.session_state["_pending_pv"] = pv.name
-                notify("success", f"Evaluated **{pv.name}**.")
+                notify("success", f"Evaluated ‘{pv.name}’.")
             except ProjectError as exc:
                 notify("error", str(exc))
             st.rerun()
@@ -393,7 +393,7 @@ def _percentile_section() -> None:
         st.metric("Contacts above the crest", f"{s['p_contact_above_crest']:.1%}", border=True)
     for w in pv.warnings:
         st.warning(w, icon=":material/warning:")
-    st.markdown("**Assumptions**\n" + "\n".join(f"- {a}" for a in pv.assumptions))
+    st.markdown("Assumptions:\n\n" + "\n".join(f"- {a}" for a in pv.assumptions))
     st.plotly_chart(percentile_figure(pv.table), key="pct_chart")
     st.dataframe(pv.table.rename(columns={
         "percentile": "Percentile", "contact_m": "Contact (m)", "contact_used_m": "Used (m)",

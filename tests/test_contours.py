@@ -235,3 +235,22 @@ def test_geus_self_consistency(project, geus_path):
     assert v1.grv_at(c0.spill_depth) == pytest.approx(v0.grv_at(min(c0.spill_depth,
                                                                     c1.spill_depth)), rel=0.03)
     assert g0 > 0
+
+
+
+def test_crs_mismatch_refused_for_contours_and_outlines(project):
+    top = paraboloid(project)                                  # ED50-UTM32
+    text = "x y z id\n-500 0 2100 a\n0 500 2100 a\n500 0 2100 a\n0 -500 2100 a\n"
+    cs = import_file(project, "lines.xyz", text.encode(), crs="EPSG:25832")
+    with pytest.raises(OperationError, match="reprojection"):
+        apply(project, "contours_to_surface", [cs.uid, top.uid],
+              {"roles": ["contours", "template"], "method": "tin"}, name="x")
+    closure = apply(project, "closure", [top.uid], {"crest": [30, 30], "choice": {"event": 0}},
+                    name="c")
+    assert any("Faults are not represented" in a for a in closure.assumptions)
+    o = apply(project, "outline_points", [], {"coords": [[0, 0], [900, 0], [0, 900]],
+                                              "crs": "EPSG:25832"}, name="o")
+    with pytest.raises(OperationError, match="reprojection"):
+        apply(project, "volumes", [closure.uid, top.uid, o.uid],
+              {"roles": ["closure", "top", "outline"], "geometry": "top_constant",
+               "thickness": 10.0}, name="v")
