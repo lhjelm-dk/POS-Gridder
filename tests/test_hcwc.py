@@ -170,3 +170,23 @@ def test_percentile_table_is_recognised():
     assert looks_like_percentiles(P) and looks_like_percentiles(P[::-1])
     assert not looks_like_percentiles(np.array([2300.0, 2400.0]))
     assert not looks_like_percentiles(np.array([24.0, 13.0, 0.0]))
+
+
+
+def test_default_h_min_and_f(project):
+    """h_min 0 m and F(h_min) 1 as defaults: recorded as such, and challenged by a prospect file
+    that sets a larger h_min."""
+    p, d = uniform_table(2100, 2200)
+    plain = import_hcwc(project, name="defaults", basis="geological", conditioning="h_min",
+                        tails="raw", table={"percentiles": p, "depths": d}, p_g=0.3,
+                        h_min=0.0, f_hmin=1.0, defaulted=["h_min", "f_hmin"])
+    assert any("h_min = 0 m default" in s for s in plain.sources)
+    assert not any("overstated" in w for w in plain.warnings)
+    with_json = import_hcwc(project, name="defaults + json", basis="geological",
+                            conditioning="h_min", tails="raw",
+                            table={"percentiles": p, "depths": d}, h_min=0.0, f_hmin=1.0,
+                            defaulted=["h_min", "f_hmin"],
+                            json=("example.hcwc.json",
+                                  (FIX / "example_prospect_spill.hcwc.json").read_bytes()))
+    assert any("POS is overstated" in w for w in with_json.warnings)
+    assert with_json.h_min == 0.0 and with_json.f_hmin == 1.0

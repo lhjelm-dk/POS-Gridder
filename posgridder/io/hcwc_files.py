@@ -27,7 +27,7 @@ def import_hcwc(project: Project, *, name: str, basis: str, conditioning: str, t
                 table: dict | None = None, origin: str | None = None, flip_sign: bool = False,
                 p_g: float | None = None, f_hmin: float | None = None,
                 h_min: float | None = None, apex: float | None = None,
-                supersedes: str | None = None):
+                defaulted: list[str] | tuple[str, ...] = (), supersedes: str | None = None):
     """A contact distribution from a Builder CSV, or from a typed ``table``
     (``{"percentiles": [...], "depths": [...]}``), with an optional .hcwc.json."""
     if (csv is None) == (table is None):
@@ -45,6 +45,8 @@ def import_hcwc(project: Project, *, name: str, basis: str, conditioning: str, t
         params = {"roles": roles, "basis": basis, "conditioning": conditioning, "tails": tails,
                   "flip_sign": bool(flip_sign), "p_g": p_g, "f_hmin": f_hmin, "h_min": h_min,
                   "apex": apex}
+        if defaulted:
+            params["defaulted"] = sorted(defaulted)
         if table is not None:
             params["table"] = {"percentiles": [float(v) for v in table["percentiles"]],
                                "depths": [float(v) for v in table["depths"]]}

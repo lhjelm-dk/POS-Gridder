@@ -24,6 +24,9 @@ from posgridder.plotting.charts import exceedance_figure, percentile_figure
 from posgridder.plotting.maps import pos_figure
 from posgridder.ui.state import notify, project, uid_of
 
+#: The default pair: every successful column counts (h_min 0 m), so every success passes (F 1).
+DEFAULT_H_MIN, DEFAULT_F_HMIN = 0.0, 1.0
+
 SECTIONS = ["Contact distribution", "Typed POS curves", "POS map", "Area and GRV by percentile"]
 
 
@@ -48,16 +51,22 @@ def _meta_fields(prefix: str) -> dict:
                           placeholder="from the .hcwc.json", key=f"{prefix}_pg",
                           help="The geological accumulation chance. On the given-the-DHI basis "
                                "it is P(G | DHI) and must be typed.")
-    f_hmin = c2.number_input("F(h_min)", min_value=0.0, max_value=1.0, value=None, format="%.4f",
-                             placeholder="typed", key=f"{prefix}_f",
-                             help="P(column ≥ h_min | G), from the Builder results. Needed for "
-                                  "event (a) from a conditioned table.")
-    h_min = c3.number_input("h_min (m)", min_value=0.0, value=None, format="%.1f",
-                            placeholder="from the .hcwc.json", key=f"{prefix}_hmin")
+    f_hmin = c2.number_input("F(h_min)", min_value=0.0, max_value=1.0,
+                             value=DEFAULT_F_HMIN, format="%.4f", key=f"{prefix}_f",
+                             help="The chance, given success, that the column reaches h_min, "
+                                  "from the Builder results (Prospect POS ÷ P(G)). The default "
+                                  "1 goes with h_min = 0 m: every successful column counts.")
+    h_min = c3.number_input("h_min (m)", min_value=0.0, value=DEFAULT_H_MIN, format="%.1f",
+                            key=f"{prefix}_hmin",
+                            help="The assessment minimum column set in the Builder. The default "
+                                 "0 m counts every successful column; clear the field to take "
+                                 "it from the .hcwc.json.")
     apex = c4.number_input("Builder apex (m)", value=None, format="%.1f",
                            placeholder="from the .hcwc.json", key=f"{prefix}_apex")
+    defaulted = [k for k, v, d in (("h_min", h_min, DEFAULT_H_MIN),
+                                   ("f_hmin", f_hmin, DEFAULT_F_HMIN)) if v == d]
     return dict(basis=basis, conditioning=conditioning, tails=tails, p_g=p_g, f_hmin=f_hmin,
-                h_min=h_min, apex=apex)
+                h_min=h_min, apex=apex, defaulted=defaulted)
 
 
 def _check_meta(meta: dict, filename: str | None) -> str | None:

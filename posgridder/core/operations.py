@@ -413,9 +413,18 @@ def _hcwc(ctx, inputs: list, params) -> Fields:
         values = {k: params.get(k) for k in ("p_g", "f_hmin", "h_min", "apex")}
         typed = list(values)
         values["builder_spill"] = None
+        # h_min = 0 m with F(h_min) = 1 is the default pair: every successful column counts,
+        # so every success passes the minimum. Recorded as a default, not as a typed value.
+        defaulted = set(params.get("defaulted", []))
         for k in typed:
             if values[k] is not None:
-                sources.append(f"{k} = {values[k]:g} typed")
+                # Typed values keep the 0.1 wording, so older distributions replay identically.
+                if k in defaulted:
+                    unit = " m" if k == "h_min" else ""
+                    sources.append(f"{k} = {values[k]:g}{unit} default (every successful "
+                                   "column counts)")
+                else:
+                    sources.append(f"{k} = {values[k]:g} typed")
         if "json" in roles:
             data, filename = _source(ctx, roles["json"])
             info = parse_hcwc_json(data)
@@ -430,6 +439,14 @@ def _hcwc(ctx, inputs: list, params) -> Fields:
             if values["h_min"] is None and "h_min" in info:
                 values["h_min"] = info["h_min"]
                 sources.append(f"h_min = {info['h_min']:g} m from {filename} inputs")
+            elif ("h_min" in defaulted and info.get("h_min", 0) > 0
+                  and values["h_min"] != info["h_min"]):
+                warnings.append(
+                    f"{filename} sets h_min = {info['h_min']:g} m, but the table is taken with "
+                    f"the default h_min = {values['h_min']:g} m and F(h_min) = "
+                    f"{values['f_hmin']:g}. If the export was made with {info['h_min']:g} m, "
+                    "F(h_min) is below 1 and POS is overstated: type F(h_min) and h_min from the "
+                    "Builder results.")
             if values["apex"] is None and "apex" in info:
                 values["apex"] = info["apex"]
                 sources.append(f"apex = {info['apex']:.1f} m from {filename} inputs "
