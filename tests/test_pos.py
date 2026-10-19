@@ -234,3 +234,21 @@ def test_round_trip_and_replay_of_every_new_kind(project):
     assert {"hcwc", "poscurve", "posmap", "pctvol"} <= kinds
     rows = replay(loaded)
     assert all(r.identical for r in rows), [(r.name, r.operation) for r in rows if not r.identical]
+
+
+
+@pytest.mark.parametrize("scale", ["Blues", "Greens", "Purples", "Oranges", "Greys", "Viridis",
+                                   "Cividis", "Plasma", "Magma", "YlGnBu"])
+def test_pos_figure_scales_and_histogram(project, scale):
+    from posgridder.plotting.maps import POS_SCALES, pos_figure
+
+    assert len(POS_SCALES) == 10
+    top, closure = dome(project)
+    dist = table_dist(project, 2100, 2200, p_g=0.3, h_min=50.0, apex=2000.0)
+    m = pos_map(project, top, closure, dist, event="b")
+    fig = pos_figure(m, scale=scale, reverse=True, histogram=True)
+    bars = [t for t in fig.data if t.type == "bar"]
+    assert len(bars) == 1
+    cell = top.xinc * top.yinc / 1e6
+    assert sum(bars[0].x) == pytest.approx((m.category == 1).sum() * cell)
+    assert pos_figure(m, scale=scale, histogram=False).data[-1].type == "heatmap"

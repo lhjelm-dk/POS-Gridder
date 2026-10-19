@@ -78,11 +78,56 @@ POS_SCALE = [[0.0, "#cde2fb"], [0.25, "#86b6ef"], [0.5, "#3987e5"], [0.75, "#1c5
 CATEGORY_GREYS = {3: "#8c8a82", 4: "#d9d6cc", 5: "#eeece6"}
 
 
-def pos_figure(m, *, height: int = 600, title: str | None = None) -> go.Figure:
-    """POS in the trap on a sequential ramp; the other categories in flat greys beneath it."""
+#: POS colour scales: five single-hue ramps and five perceptually ordered multi-hue ones.
+#: Rainbow scales (Jet, Turbo) are left out: their bright bands read as edges in a smooth
+#: probability field. Cividis is the one designed for colour-vision deficiency.
+POS_SCALES: dict[str, object] = {
+    "Blues": POS_SCALE,
+    "Greens": "Greens",
+    "Purples": "Purples",
+    "Oranges": "Oranges",
+    "Greys": "Greys",
+    "Viridis": "Viridis",
+    "Cividis": "Cividis",
+    "Plasma": "Plasma",
+    "Magma": "Magma",
+    "YlGnBu": "YlGnBu",
+}
+#: Plotly's single-hue ramps run dark → light; reversed they read light = low, like Blues.
+_DARK_FIRST = {"Greens", "Purples", "Oranges", "Greys", "YlGnBu"}
+
+
+def _scale(name: str, reverse: bool):
+    """A colorscale as a list of [position, colour], with low POS light unless reversed."""
+    import plotly.colors as pc
+
+    spec = POS_SCALES[name]
+    if isinstance(spec, str):
+        flip = (spec in _DARK_FIRST) != reverse
+        spec = pc.get_colorscale(spec + ("_r" if flip else ""))
+    elif reverse:
+        spec = [[1 - p, c] for p, c in reversed(spec)]
+    return [[float(p), c] for p, c in spec]
+
+
+def pos_figure(m, *, height: int = 600, title: str | None = None, scale: str = "Blues",
+               reverse: bool = False, histogram: bool = True, bins: int = 20) -> go.Figure:
+    """POS in the trap on the chosen scale; the other categories in flat greys beneath it.
+
+    With ``histogram`` a narrow panel beside the colour bar shows the trap area in each POS
+    interval, its bars coloured from the same scale, so the colour bar reads as a distribution.
+    """
+    import plotly.colors as pc
+    from plotly.subplots import make_subplots
+
     from posgridder.core.pos import CATEGORIES
 
-    fig = go.Figure()
+    colorscale = _scale(scale, reverse)
+    if histogram:
+        fig = make_subplots(rows=1, cols=2, column_widths=[0.84, 0.16], horizontal_spacing=0.03)
+    else:
+        fig = go.Figure()
+    loc = dict(row=1, col=1) if histogram else {}
     for code, grey in CATEGORY_GREYS.items():
         sel = m.category == code
         if not sel.any():
@@ -90,25 +135,47 @@ def pos_figure(m, *, height: int = 600, title: str | None = None) -> go.Figure:
         fig.add_trace(go.Heatmap(
             z=np.where(sel, 1.0, np.nan), x=m.x, y=m.y, colorscale=[[0, grey], [1, grey]],
             showscale=False, name=CATEGORIES[code], showlegend=True,
-            hovertemplate=f"{CATEGORIES[code]}<extra></extra>"))
+            hovertemplate=f"{CATEGORIES[code]}<extra></extra>"), **loc)
     zero = np.where(m.category == 2, 0.0, np.nan)
     if np.isfinite(zero).any():
         fig.add_trace(go.Heatmap(z=zero, x=m.x, y=m.y, colorscale=[[0, "#f5f1e6"], [1, "#f5f1e6"]],
                                  showscale=False, name=CATEGORIES[2], showlegend=True,
-                                 hovertemplate=f"{CATEGORIES[2]}: POS 0<extra></extra>"))
-    vmax = max(float(np.nanmax(m.pos)) if np.isfinite(m.pos).any() else 0.0, 1e-6)
+                                 hovertemplate=f"{CATEGORIES[2]}: POS 0<extra></extra>"), **loc)
+    pos = m.pos[m.category == 1]
+    vmax = max(float(pos.max()) if pos.size else 0.0, 1e-6)
     fig.add_trace(go.Heatmap(
         z=np.where(m.category == 1, m.pos, np.nan), x=m.x, y=m.y, zmin=0, zmax=vmax,
-        colorscale=POS_SCALE, name="POS", colorbar=dict(title=dict(text="POS"), tickformat=".0%"),
-        hovertemplate="X %{x:.0f}<br>Y %{y:.0f}<br>POS %{z:.1%}<extra></extra>"))
+        colorscale=colorscale, name="POS",
+        colorbar=dict(title=dict(text="POS"), tickformat=".0%", len=1.0, y=0.5, yanchor="middle",
+                      x=1.0, xanchor="left"),
+        hovertemplate="X %{x:.0f}<br>Y %{y:.0f}<br>POS %{z:.1%}<extra></extra>"), **loc)
+
+    if histogram:
+        edges = np.linspace(0.0, vmax, bins + 1)
+        counts, _ = np.histogram(pos, bins=edges)
+        area = counts * m.xinc * m.yinc / 1e6
+        centres = 0.5 * (edges[1:] + edges[:-1])
+        colours = pc.sample_colorscale(colorscale, list(centres / vmax))
+        fig.add_trace(go.Bar(
+            x=area, y=centres, orientation="h", width=(edges[1] - edges[0]) * 0.92,
+            marker=dict(color=colours, line=dict(width=0)), showlegend=False, name="Area",
+            customdata=np.column_stack([edges[:-1], edges[1:]]),
+            hovertemplate="POS %{customdata[0]:.1%}–%{customdata[1]:.1%}<br>"
+                          "%{x:.2f} km²<extra></extra>"), row=1, col=2)
+        fig.update_xaxes(title_text="Area (km²)", rangemode="tozero", gridcolor="#ebe8df",
+                         row=1, col=2)
+        # Same range as the colour bar, so a bar sits beside its own colour.
+        fig.update_yaxes(range=[0, vmax], tickformat=".0%", side="right", showticklabels=False,
+                         gridcolor="#ebe8df", row=1, col=2)
     fig.update_layout(
         height=height, margin=dict(l=10, r=10, t=30, b=10),
-        xaxis=dict(title="X (m)", tickformat="d", showgrid=False),
-        yaxis=dict(title="Y (m)", tickformat="d", showgrid=False, scaleanchor="x", scaleratio=1),
         title=dict(text=title or m.name, font=dict(size=14)),
         legend=dict(x=0.01, y=0.99, xanchor="left", yanchor="top",
                     bgcolor="rgba(30,27,22,0.6)", font=dict(color="#ffffff")),
-        plot_bgcolor="#ffffff")
+        plot_bgcolor="#ffffff", bargap=0)
+    fig.update_xaxes(title_text="X (m)", tickformat="d", showgrid=False, **loc)
+    fig.update_yaxes(title_text="Y (m)", tickformat="d", showgrid=False, scaleanchor="x",
+                     scaleratio=1, **loc)
     return fig
 
 

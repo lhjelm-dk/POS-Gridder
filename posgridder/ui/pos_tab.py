@@ -21,7 +21,7 @@ from posgridder.io.hcwc_files import import_area_depth, import_hcwc
 from posgridder.io.report import results_json
 from posgridder.io.zmap import write_zmap
 from posgridder.plotting.charts import exceedance_figure, percentile_figure
-from posgridder.plotting.maps import pos_figure
+from posgridder.plotting.maps import POS_SCALES, pos_figure
 from posgridder.ui.state import notify, project, uid_of
 
 #: The default pair: every successful column counts (h_min 0 m), so every success passes (F 1).
@@ -339,7 +339,13 @@ def _map_section() -> None:
             st.metric("Contact shift", f"{s['shift_m']:+.1f} m", border=True)
     for w in m.warnings:
         st.warning(w, icon=":material/warning:")
-    st.plotly_chart(pos_figure(m), key="pos_map_chart")
+    with st.container(horizontal=True, vertical_alignment="bottom"):
+        scale = st.selectbox("Colour scale", list(POS_SCALES), key="pos_scale", width=180)
+        reverse = st.toggle("Reverse", key="pos_scale_reverse")
+        hist = st.toggle("Histogram", value=True, key="pos_hist",
+                         help="Trap area in each POS interval, beside the colour bar.")
+    st.plotly_chart(pos_figure(m, scale=scale, reverse=reverse, histogram=hist),
+                    key="pos_map_chart")
     left, right = st.columns(2)
     with left:
         st.markdown("Assumptions:\n\n" + "\n".join(f"- {a}" for a in m.assumptions))
