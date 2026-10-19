@@ -36,6 +36,11 @@ save) → **2 Surfaces** → **3 Contours** → **4 Closure** → **5 Volumes** 
 **7 POS & results**, where POS is shown on the structure contours. Every change is autosaved to
 `~/.pos-gridder/` (the last three sessions are kept; `POSGRIDDER_AUTOSAVE=off` switches it off).
 
+A progress strip above the tabs shows which steps are done and names the next one; the sidebar
+lists everything the project holds, stale results marked. Tab 7 builds a one-page prospect
+summary (HTML, opens offline, prints to PDF) with the map, the numbers, every assumption and
+warning, and the source files' SHA-256.
+
 The example project (tab 1 Start) makes a synthetic two-dome surface for trying the workflow.
 The documents that go with v1:
 - [`docs/WORKED_EXAMPLE.md`](docs/WORKED_EXAMPLE.md) — the workflow step by step on real data,

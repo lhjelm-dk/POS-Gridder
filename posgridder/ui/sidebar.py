@@ -93,8 +93,30 @@ def _layer_list() -> None:
 def render() -> None:
     with st.sidebar:
         st.subheader("Project", divider="gray")
+        _tree()
         _layer_list()
         with st.expander("Import surfaces", icon=":material/upload_file:",
                          expanded=not project().current("surface")):
             _import_form()
         st.caption(f"Formats: {', '.join(f.label for f in FORMATS.values())}")
+
+
+KIND_LABELS = {"surface": "Surfaces", "contours": "Contour sets", "closure": "Closures",
+               "outline": "Outlines", "volumes": "Volumes", "hcwc": "Contact distributions",
+               "poscurve": "Typed POS curves", "posmap": "POS maps",
+               "pctvol": "Volumes by percentile"}
+
+
+def _tree() -> None:
+    """Everything the project holds, by kind, with stale objects marked."""
+    proj = project()
+    if not proj.layers:
+        return
+    with st.expander(f"Project contents ({len(proj.layers)})", icon=":material/account_tree:"):
+        for kind, label in KIND_LABELS.items():
+            uids = proj.current(kind)
+            if not uids:
+                continue
+            lines = [f"- {proj.objects[u].name}" + (" · :orange[stale]" if proj.is_stale(u)
+                                                     else "") for u in uids]
+            st.markdown(f"**{label}**\n" + "\n".join(lines))

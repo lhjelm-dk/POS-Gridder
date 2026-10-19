@@ -10,8 +10,8 @@ from __future__ import annotations
 import streamlit as st
 
 from posgridder.io import autosave
-from posgridder.ui import (closure_tab, contours_tab, pos_tab, sidebar, start_tab, surfaces_tab,
-                           volumes_tab)
+from posgridder.ui import (closure_tab, contours_tab, pos_tab, progress, sidebar, start_tab,
+                           surfaces_tab, volumes_tab)
 from posgridder.ui.state import project, show_notices
 
 st.set_page_config(page_title="POS-Gridder", page_icon=":material/layers:", layout="wide")
@@ -23,6 +23,7 @@ sidebar.render()
 # Always one container here, empty or not: an element that comes and goes above the tabs would
 # shift their position, and Streamlit would then rebuild them and jump back to the first tab.
 with st.container():
+    progress.render()
     show_notices()
 
 start, surfaces, contours, closure, volumes, contacts, results = st.tabs(

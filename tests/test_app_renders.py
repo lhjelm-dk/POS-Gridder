@@ -265,3 +265,43 @@ def test_pos_map_on_structure_contours():
     assert any(n and n.startswith("Spill") for n in names)
     assert any(n and n.startswith("Crest") for n in names)
     assert sum(1 for t in fig.data if t.type == "contour") >= 3
+
+
+
+def test_progress_strip_follows_the_workflow():
+    at = _app()
+    assert any("Next: import a surface" in c.value for c in at.caption)
+    _button(at, "Load example project").click().run()
+    assert any("Next: confirm a closure" in c.value for c in at.caption)
+    _button(at, "Confirm this interpretation").click().run()
+    assert any("Next: calculate area and GRV" in c.value for c in at.caption)
+
+
+def test_project_tree_and_summary():
+    from posgridder.core.operations import apply
+    from posgridder.io.summary import build, related
+    from tests.test_pos import dome, table_dist
+
+    p = Project()
+    top, closure = dome(p)
+    vol = apply(p, "volumes", [closure.uid, top.uid],
+                {"roles": ["closure", "top"], "geometry": "top_constant", "thickness": 50.0},
+                name="volumes")
+    dist = table_dist(p, 2100, 2200, p_g=0.3, h_min=50.0, apex=2000.0)
+    m = apply(p, "pos_map", [closure.uid, top.uid, dist.uid],
+              {"roles": ["closure", "top", "hcwc"], "event": "a"}, name="POS a")
+    pv = apply(p, "percentile_volumes", [vol.uid, dist.uid], {}, name="by percentile")
+    parts = related(p, m.uid)
+    assert parts["volumes"].uid == vol.uid and parts["pctvol"].uid == pv.uid
+    page = build(p, m.uid)
+    for text in ("POS a", "Prospect POS", "GRV P90 / P50 / P10", "Provenance",
+                 f"{closure.spill_depth:.1f} m", "plotly"):
+        assert text in page
+    at = _app(p)
+    assert not at.exception, at.exception
+    tree = " ".join(m.value for m in at.sidebar.markdown)
+    assert "Closures" in tree and "POS maps" in tree
+    at.segmented_control(key="results_section").set_value("Prospect summary").run()
+    _button(at, "Build the summary").click().run()
+    assert not at.exception, at.exception
+    assert any(d.label == "Download the summary (HTML)" for d in at.get("download_button"))

@@ -28,7 +28,8 @@ from posgridder.ui.state import notify, project, uid_of
 #: The default pair: every successful column counts (h_min 0 m), so every success passes (F 1).
 DEFAULT_H_MIN, DEFAULT_F_HMIN = 0.0, 1.0
 
-SECTIONS = ["Contact distribution", "Typed POS curves", "POS map", "Area and GRV by percentile"]
+SECTIONS = ["Contact distribution", "Typed POS curves", "POS map", "Area and GRV by percentile",
+            "Prospect summary"]
 
 
 def _names(kind: str) -> list[str]:
@@ -459,5 +460,43 @@ def render_results() -> None:
                                    label_visibility="collapsed") or RESULT_SECTIONS[0]
     if section == RESULT_SECTIONS[0]:
         _map_section()
-    else:
+    elif section == RESULT_SECTIONS[1]:
         _percentile_section()
+    else:
+        _summary_section()
+
+
+def _summary_section() -> None:
+    from posgridder.io.summary import build, related
+
+    proj = project()
+    maps = _names("posmap")
+    if not maps:
+        st.info("The summary is built from a POS map; none has been made yet.",
+                icon=":material/info:")
+        return
+    st.caption("One printable page: the structure and volume, the chance of success, the POS "
+               "map on the structure, the volumes by percentile, every assumption and warning, "
+               "and the source files with their SHA-256.")
+    with st.container(horizontal=True, vertical_alignment="bottom"):
+        name = st.selectbox("POS map", maps, key="summary_map", width=420)
+        scale = st.selectbox("Colour scale", list(POS_SCALES), key="summary_scale", width=180)
+    uid = uid_of(name)
+    parts = related(proj, uid)
+    found = [label for key, label in (("closure", "closure"), ("top", "top surface"),
+                                      ("volumes", "volumes"), ("hcwc", "contacts"),
+                                      ("curve", "typed curve"),
+                                      ("pctvol", "volumes by percentile")) if key in parts]
+    st.write("Draws on: " + ", ".join(found) + ".")
+    if "pctvol" not in parts and "hcwc" in parts:
+        st.caption("No area/GRV-by-percentile result was made from this closure's volumes and "
+                   "these contacts; the page leaves that section out.")
+    if st.button("Build the summary", type="primary", icon=":material/description:"):
+        with st.spinner("Building the page…"):
+            st.session_state["_summary"] = (uid, scale, build(proj, uid, scale=scale))
+    built = st.session_state.get("_summary")
+    if built and built[0] == uid and built[1] == scale:
+        st.download_button("Download the summary (HTML)", built[2].encode("utf-8"),
+                           file_name=f"{name} summary.html", mime="text/html",
+                           icon=":material/download:", on_click="ignore")
+        st.caption("Opens in any browser, without a network; print it from there for a PDF.")
