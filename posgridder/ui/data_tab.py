@@ -43,7 +43,8 @@ def render() -> None:
         st.warning(w, icon=":material/warning:")
 
     with st.container(horizontal=True, vertical_alignment="bottom"):
-        colorscale = st.selectbox("Colour scale", COLORSCALES, key="map_colorscale", width=200)
+        colorscale = st.selectbox("Colour scale", COLORSCALES, key="map_colorscale", width=200,
+                                  index=COLORSCALES.index("Viridis"))
         reverse = st.toggle("Reverse", key="map_reverse")
     st.plotly_chart(surface_figure(surface, colorscale=colorscale, reverse=reverse),
                     key="surface_map")

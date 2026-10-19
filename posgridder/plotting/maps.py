@@ -7,17 +7,17 @@ import plotly.graph_objects as go
 
 from posgridder.core.model import Surface
 
-COLORSCALES: tuple[str, ...] = ("Viridis", "Turbo", "Earth", "RdBu", "Greys")
-
-
 def surface_figure(surface: Surface, *, colorscale: str = "Viridis", reverse: bool = False,
                    height: int = 650) -> go.Figure:
-    """The surface as a heatmap in its own coordinates, nulls left blank."""
+    """The surface as a heatmap in its own coordinates, nulls left blank.
+
+    ``colorscale`` is one of :data:`COLOUR_SCALES`, the same ten as the POS map.
+    """
     z = surface.values.filled(np.nan)
     unit = f" {surface.unit}" if surface.unit else ""
     fig = go.Figure(go.Heatmap(
         z=z, x=surface.x, y=surface.y,
-        colorscale=colorscale, reversescale=reverse,
+        colorscale=_scale(colorscale, reverse),
         colorbar=dict(title=dict(text=f"{surface.domain}{(' (' + surface.unit + ')') if surface.unit else ''}")),
         hovertemplate="X %{x:.0f}<br>Y %{y:.0f}<br>%{z:.2f}" + unit + "<extra></extra>",
     ))
@@ -95,10 +95,14 @@ POS_SCALES: dict[str, object] = {
 }
 #: Plotly's single-hue ramps run dark → light; reversed they read light = low, like Blues.
 _DARK_FIRST = {"Greens", "Purples", "Oranges", "Greys", "YlGnBu"}
+#: The same scales serve every map: surfaces, closure previews, contour backgrounds, POS.
+COLOUR_SCALES = POS_SCALES
+COLORSCALES: tuple[str, ...] = tuple(POS_SCALES)
 
 
 def _scale(name: str, reverse: bool):
-    """A colorscale as a list of [position, colour], with low POS light unless reversed."""
+    """A colorscale as a list of [position, colour]: single-hue ramps light at the low end,
+    multi-hue ones (Viridis …) dark at the low end, either flipped by ``reverse``."""
     import plotly.colors as pc
 
     spec = POS_SCALES[name]

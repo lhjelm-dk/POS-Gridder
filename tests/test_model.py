@@ -110,3 +110,19 @@ def test_project_refuses_unknown_inputs(project):
                 Derivation.make("copy", ["nope"]))
     with pytest.raises(ProjectError):
         project.add(s)
+
+
+
+def test_surface_map_offers_the_pos_scales(dome):
+    from posgridder.plotting.maps import COLORSCALES, POS_SCALES, surface_figure
+
+    assert COLORSCALES == tuple(POS_SCALES) and len(COLORSCALES) == 10
+    for name in COLORSCALES:
+        for reverse in (False, True):
+            fig = surface_figure(dome, colorscale=name, reverse=reverse)
+            scale = fig.data[0].colorscale
+            assert scale[0][0] == 0.0 and scale[-1][0] == 1.0
+    light, dark = (surface_figure(dome, colorscale="Blues").data[0].colorscale[i][1]
+                   for i in (0, -1))
+    flipped = surface_figure(dome, colorscale="Blues", reverse=True).data[0].colorscale
+    assert flipped[0][1] == dark and flipped[-1][1] == light
