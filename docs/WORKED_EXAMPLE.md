@@ -15,13 +15,13 @@ the contacts are re-anchored, and why the app warns that the spills disagree.
 - Result: 217 × 238 nodes at 250 m, 23,784 valid, 945–1549 ms. CRS ED50-UTM32, read from the file.
 - Without the flip the import still runs, with a warning that most values are negative.
 
-## 2. Convert to depth — tab **2.0 Prepare**, Depth conversion
+## 2. Convert to depth — tab **2 Surfaces**, Depth conversion
 
 - **Method**: V0 + kZ, with V0 = 1800 m/s and k = 0.5 /s.
-- Result: depth 959.5–1702.5 m. The lineage on tab **1.0 Data** reads
+- Result: depth 959.5–1702.5 m. The lineage under **Map** on tab **2 Surfaces** reads
   `depth_convert(k=0.5, method=v0k, v0=1800.0) ← import(… flip_sign=True …) ← file (SHA-256 …)`.
 
-## 3. Interpret the closure — tab **3.0 Closure**
+## 3. Interpret the closure — tab **4 Closure**
 
 - **Minimum closure height**: 10 m. The candidates are:
 
@@ -37,7 +37,7 @@ the contacts are re-anchored, and why the app warns that the spills disagree.
   ±1.8 m. The assumptions include the single fill point, 8-connectivity, and the absence of
   faults.
 
-## 4. Area and GRV — tab **4.0 Volumes**
+## 4. Area and GRV — tab **5 Volumes**
 
 - **Geometry**: top surface and a constant thickness of 50 m.
 - At the spill the area is 150.61 km², the direct GRV 5,626.5 × 10⁶ m³ and the area–depth GRV
@@ -45,7 +45,7 @@ the contacts are re-anchored, and why the app warns that the spills disagree.
 - The HCWC Builder CSV export from this tab is accepted by the Builder's own reader, and its GRV
   equals the area–depth GRV.
 
-## 5. Contacts and POS — tab **5.0 HCWC & POS**
+## 5. Contacts and POS — tabs **6 Contacts** and **7 POS & results**
 
 - **Import from HCWC Builder**:
   - CSV `hcwc_percentiles_geological.csv` (basis read from the name), plus the prospect file.
@@ -68,17 +68,18 @@ the contacts are re-anchored, and why the app warns that the spills disagree.
   - 30.4 % of the contacts lie deeper than the map spill and are taken at the spill, which is
     why P10 equals the GRV at the spill.
 
-## 6. Contours — tab **6.0 Contours**
+## 6. Contours — tab **3 Contours**
 
 - **Contour a surface** at 10 m gives 153 lines. A box on the map selects lines;
   **Delete selected** makes a new version of the set.
 - **Make surface** with the thin-plate spline reproduces the main closure: crest within 0.2 m,
   the same spill, GRV −0.05 % (`docs/BENCHMARK.md`).
 
-## 7. Save and check — tab **7.0 Project**
+## 7. Save and check — tab **1 Start**
 
-- **Download project file** (0.9 MB). **Open** it in a new session, then **Run the replay
-  check**: every object is recomputed from the source files and reproduces exactly.
+- Every change is autosaved; **Reopen last project** brings the session back after a
+  restart. **Download project file** (0.9 MB) keeps a copy elsewhere. **Open** it in a new
+  session, then **Run the replay check** under **Audit**: every object is recomputed from the source files and reproduces exactly.
 
 ## What to compare on a real prospect
 

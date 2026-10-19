@@ -31,7 +31,12 @@ records how it was made and can be recomputed from the imported files.
   `docs/BENCHMARK.md`) or linear TIN, as a new layer or a new version of the source surface;
 - outlines from closed contours, and GeoPackage export.
 
-An example project (Project tab) makes a synthetic two-dome surface for trying the workflow.
+The tabs follow the workflow: **1 Start** (reopen the autosaved project, the example, open,
+save) → **2 Surfaces** → **3 Contours** → **4 Closure** → **5 Volumes** → **6 Contacts** →
+**7 POS & results**, where POS is shown on the structure contours. Every change is autosaved to
+`~/.pos-gridder/` (the last three sessions are kept; `POSGRIDDER_AUTOSAVE=off` switches it off).
+
+The example project (tab 1 Start) makes a synthetic two-dome surface for trying the workflow.
 The documents that go with v1:
 - [`docs/WORKED_EXAMPLE.md`](docs/WORKED_EXAMPLE.md) — the workflow step by step on real data,
   with the numbers to expect;

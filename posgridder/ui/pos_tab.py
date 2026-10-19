@@ -1,4 +1,5 @@
-"""Tab 5.0 HCWC & POS: contact distributions, typed curves, POS maps, area/GRV by percentile.
+"""Tabs 6 Contacts and 7 POS & results: contact distributions and typed curves, then POS maps
+and area/GRV by percentile.
 
 Nothing about the probability is defaulted: the basis, the conditioning and the tail treatment
 of a table are declared, P(G) and F(h_min) are typed or read from the Builder prospect file
@@ -263,7 +264,7 @@ def _map_section() -> None:
     proj = project()
     closures, dists, curves = _names("closure"), _names("hcwc"), _names("poscurve")
     if not closures:
-        st.info("A POS map is drawn on a confirmed closure (tab **3.0 Closure**).",
+        st.info("A POS map is drawn on a confirmed closure (tab **4 Closure**).",
                 icon=":material/info:")
     elif not dists and not curves:
         st.info("A POS map needs a contact distribution or a typed POS curve.",
@@ -344,7 +345,15 @@ def _map_section() -> None:
         reverse = st.toggle("Reverse", key="pos_scale_reverse")
         hist = st.toggle("Histogram", value=True, key="pos_hist",
                          help="Trap area in each POS interval, beside the colour bar.")
-    st.plotly_chart(pos_figure(m, scale=scale, reverse=reverse, histogram=hist),
+        structure_on = st.toggle("Structure contours", value=True, key="pos_structure",
+                                 help="Depth contours of the top surface over the POS colours, "
+                                      "with the spill contour and the crest.")
+    roles = dict(zip(m.derivation.params.get("roles", []), m.derivation.inputs))
+    top = proj.objects.get(roles.get("top"))
+    closure = proj.objects.get(roles.get("closure"))
+    st.plotly_chart(pos_figure(m, scale=scale, reverse=reverse, histogram=hist,
+                               structure=top if structure_on else None,
+                               closure=closure if structure_on else None),
                     key="pos_map_chart")
     left, right = st.columns(2)
     with left:
@@ -395,7 +404,7 @@ def _percentile_section() -> None:
                 notify("error", str(exc))
             st.rerun()
     else:
-        st.info("Needs a volume result (tab **4.0 Volumes**, or an imported area–depth table) "
+        st.info("Needs a volume result (tab **5 Volumes**, or an imported area–depth table) "
                 "and a contact distribution.", icon=":material/info:")
     results = _names("pctvol")
     if not results:
@@ -428,14 +437,27 @@ def _percentile_section() -> None:
                            icon=":material/description:", on_click="ignore")
 
 
-def render() -> None:
-    section = st.segmented_control("Section", SECTIONS, default=SECTIONS[0], key="pos_section",
-                                   label_visibility="collapsed") or SECTIONS[0]
-    if section == SECTIONS[0]:
+CONTACT_SECTIONS = SECTIONS[:2]
+RESULT_SECTIONS = SECTIONS[2:]
+
+
+def render_contacts() -> None:
+    """Tab 6 Contacts: contact distributions from HCWC Builder, and typed POS curves."""
+    section = st.segmented_control("Section", CONTACT_SECTIONS, default=CONTACT_SECTIONS[0],
+                                   key="contacts_section",
+                                   label_visibility="collapsed") or CONTACT_SECTIONS[0]
+    if section == CONTACT_SECTIONS[0]:
         _distribution_section()
-    elif section == SECTIONS[1]:
+    else:
         _curves_section()
-    elif section == SECTIONS[2]:
+
+
+def render_results() -> None:
+    """Tab 7 POS & results: the POS map on the structure, and area and GRV by percentile."""
+    section = st.segmented_control("Section", RESULT_SECTIONS, default=RESULT_SECTIONS[0],
+                                   key="results_section",
+                                   label_visibility="collapsed") or RESULT_SECTIONS[0]
+    if section == RESULT_SECTIONS[0]:
         _map_section()
     else:
         _percentile_section()

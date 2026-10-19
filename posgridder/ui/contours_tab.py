@@ -1,4 +1,4 @@
-"""Tab 6.0 Contours: contour sets made from a surface or imported, edited, and reconciled.
+"""Tab 3 Contours: contour sets made from a surface or imported, edited, and reconciled.
 
 A contour set derived from a surface is not independent evidence: it records its source and
 turns stale when the surface changes. Deleting lines makes a new version of the set; the source
@@ -17,7 +17,7 @@ from posgridder.core.contours import DEFAULT_METHOD, METHODS, geometry_for
 from posgridder.core.model import DOMAINS, ProjectError, Source
 from posgridder.core.operations import apply, recalculate
 from posgridder.io.vectors import Z_LEVEL, inspect, kind_of, to_geopackage
-from posgridder.plotting.maps import contour_figure
+from posgridder.plotting.maps import contour_figure, nice_interval
 from posgridder.ui.pickers import scale_picker
 from posgridder.ui.state import notify, project, select, uid_of
 
@@ -34,10 +34,15 @@ def _make_form() -> None:
     if not surfaces:
         st.caption("No surface to contour.")
         return
+    name = st.selectbox("Surface", surfaces, key="contour_surface")
+    st_ = proj.objects[uid_of(name)].stats()
+    auto = nice_interval(st_["max"] - st_["min"])
     with st.form("make_contours", border=False):
-        c1, c2, c3, c4 = st.columns([2, 1, 1, 1])
-        name = c1.selectbox("Surface", surfaces)
-        interval = c2.number_input("Interval", min_value=0.01, value=10.0, step=5.0)
+        c2, c3, c4 = st.columns(3)
+        interval = c2.number_input("Interval", min_value=0.01, value=auto, step=auto / 2,
+                                   key=f"contour_interval_{uid_of(name)}",
+                                   help=f"Default: a round interval giving about 25 lines over "
+                                        f"the {st_['max'] - st_['min']:.0f} of relief.")
         start = c3.number_input("Start", value=None, format="%.2f", placeholder="auto")
         stop = c4.number_input("Stop", value=None, format="%.2f", placeholder="auto")
         submitted = st.form_submit_button("Contour", icon=":material/stacked_line_chart:")
@@ -51,6 +56,7 @@ def _make_form() -> None:
             cs = apply(proj, "contour", [uid_of(name)], params,
                        name=f"{name} contours {interval:g}")
             st.session_state["_pending_cs"] = cs.name
+            st.session_state["_pending_contour_step"] = "Edit"
             notify("success", f"Made ‘{cs.name}’: {cs.n_lines} lines.")
         except ProjectError as exc:
             notify("error", str(exc))
@@ -100,6 +106,7 @@ def _import_form() -> None:
                        {"level_field": None if level == Z_LEVEL else level, "domain": domain,
                         "flip_sign": flip, "crs": crs.strip() or None}, name=name)
             st.session_state["_pending_cs"] = cs.name
+            st.session_state["_pending_contour_step"] = "Edit"
             notify("success", f"Imported ‘{cs.name}’: {cs.n_lines} lines.")
             for w in cs.warnings:
                 notify("warning", w)
@@ -151,9 +158,12 @@ def _view(cs) -> None:
                                         help="Black reads better over the light end of the "
                                              "single-hue scales.")
             lines = "#1e1b16" if pick == "Black" else "#ffffff"
+    closures = [proj.objects[u] for u in proj.current("closure")
+                if background is not None and proj.objects[u].surface_uid == background.uid]
     event = st.plotly_chart(contour_figure(cs, background=background, selected=selected,
                                            colorscale=scale, reverse=reverse,
-                                           line_colour=lines),
+                                           line_colour=lines,
+                                           closure=closures[-1] if closures else None),
                             key=f"contour_map_{cs.uid}", on_select="rerun",
                             selection_mode=("box", "lasso", "points"))
     picked = {int(p["customdata"]) for p in (event.selection.points if event else [])
@@ -163,14 +173,16 @@ def _view(cs) -> None:
         st.rerun()
     st.caption("Box or lasso on the map selects lines (the toolbar switches between them).")
 
-    table = pd.DataFrame({
-        "Line": np.arange(cs.n_lines), "Level": cs.levels,
-        "Closed": [cs.closed(k) for k in range(cs.n_lines)],
-        "Area (km²)": [cs.area_km2(k) for k in range(cs.n_lines)],
-        "Vertices": np.diff(cs.offsets), "Deleted": cs.deleted,
-    })
-    ev = st.dataframe(table, hide_index=True, on_select="rerun", selection_mode="multi-row",
-                      height=240, key=f"contour_table_{cs.uid}")
+    with st.expander(f"Line table ({cs.n_lines} lines): select rows instead of drawing a box",
+                     icon=":material/table_rows:"):
+        table = pd.DataFrame({
+            "Line": np.arange(cs.n_lines), "Level": cs.levels,
+            "Closed": [cs.closed(k) for k in range(cs.n_lines)],
+            "Area (km²)": [cs.area_km2(k) for k in range(cs.n_lines)],
+            "Vertices": np.diff(cs.offsets), "Deleted": cs.deleted,
+        })
+        ev = st.dataframe(table, hide_index=True, on_select="rerun", selection_mode="multi-row",
+                          height=240, key=f"contour_table_{cs.uid}")
     rows = set(ev.selection.rows) if ev else set()
     chosen = sorted(selected | rows)
     with st.container(horizontal=True, vertical_alignment="center"):
@@ -196,7 +208,6 @@ def _view(cs) -> None:
             st.rerun()
     st.download_button("Contours (GeoPackage)", to_geopackage(cs), file_name=f"{cs.name}.gpkg",
                        icon=":material/download:", on_click="ignore")
-    _reconcile(cs)
 
 
 def _reconcile(cs) -> None:
@@ -257,17 +268,41 @@ def _reconcile(cs) -> None:
     st.rerun()
 
 
-def render() -> None:
-    with st.expander("Contour a surface", icon=":material/stacked_line_chart:",
-                     expanded=not _names("contours")):
-        _make_form()
-    with st.expander("Import contours", icon=":material/upload_file:"):
-        _import_form()
+STEPS = ["Make or import", "Edit", "Make surface"]
+
+
+def _chosen_set():
     names = _names("contours")
     if not names:
-        return
+        st.info("No contour set yet: make one from a surface or import one (step 1).",
+                icon=":material/info:")
+        return None
     pending = st.session_state.pop("_pending_cs", None)
     if pending in names:
         st.session_state["cs_view"] = pending
-    cs = project().objects[uid_of(st.selectbox("Contour set", names, key="cs_view"))]
-    _view(cs)
+    return project().objects[uid_of(st.selectbox("Contour set", names, key="cs_view"))]
+
+
+def render() -> None:
+    st.caption("Contours are a second way to the structure: made from a surface and edited, or "
+               "imported, and turned into a surface for the closure on tab **4 Closure**.")
+    pending = st.session_state.pop("_pending_contour_step", None)
+    if pending in STEPS:
+        st.session_state["contour_step"] = pending        # before the control is drawn
+    step = st.segmented_control("Step", STEPS, default=STEPS[0], key="contour_step",
+                                label_visibility="collapsed") or STEPS[0]
+    if step == STEPS[0]:
+        with st.container(border=True):
+            st.markdown("Contour a surface")
+            _make_form()
+        with st.container(border=True):
+            st.markdown("Import contour lines")
+            _import_form()
+        return
+    cs = _chosen_set()
+    if cs is None:
+        return
+    if step == STEPS[1]:
+        _view(cs)
+    else:
+        _reconcile(cs)

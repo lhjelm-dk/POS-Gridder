@@ -13,6 +13,12 @@ ROOT = Path(__file__).resolve().parents[1]
 GEUS_GRID = ROOT / "data" / "private" / "HVN_Top Gassum_TWTgrd250m_3xsm_geus2023.dat"
 
 
+@pytest.fixture(autouse=True)
+def _autosave_in_tmp(tmp_path, monkeypatch):
+    """Every test autosaves into its own temporary folder, never into the user's."""
+    monkeypatch.setenv("POSGRIDDER_AUTOSAVE", str(tmp_path / "autosave"))
+
+
 @pytest.fixture
 def geus_path() -> Path:
     """The GEUS Top Gassum TWT grid. It is not in the repository; tests that need it skip."""

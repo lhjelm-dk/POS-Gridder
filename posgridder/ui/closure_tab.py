@@ -1,4 +1,4 @@
-"""Tab 3.0 Closure: candidate crests and spills, then a confirmed interpretation.
+"""Tab 4 Closure: candidate crests and spills, then a confirmed interpretation.
 
 Nothing here is accepted by default. The tool proposes crests (with their conservative spill)
 and, for the chosen crest, every depth at which the fill reaches a boundary or a saddle. The
@@ -111,9 +111,12 @@ def _interpretation(surface, crest, connectivity: int, min_height: float) -> Non
     footprint = footprint_at(surface, fill, spill) if spill > z_crest else None
     with st.container(horizontal=True, vertical_alignment="bottom"):
         scale, reverse = scale_picker("closure_map")
-    fig = surface_figure(surface, height=560, colorscale=scale, reverse=reverse)
+        contours = st.toggle("Contours", value=True, key="closure_map_contours")
+    fig = surface_figure(surface, height=560, colorscale=scale, reverse=reverse,
+                         contours=contours)
     if footprint is not None and footprint.any():
-        add_footprint(fig, surface, footprint, name=f"Footprint at {spill:.1f} m")
+        add_footprint(fig, surface, footprint, spill=spill, name=f"Footprint at {spill:.1f} m",
+                      color=SERIES[1], width=2.5)
     cx, cy = node_xy(surface, crest)
     add_point(fig, cx, cy, name="Crest", text=f"Crest {z_crest:.1f} m")
     if pick != "manual":
@@ -124,7 +127,7 @@ def _interpretation(surface, crest, connectivity: int, min_height: float) -> Non
     if footprint is not None:
         area = footprint.sum() * surface.xinc * surface.yinc / 1e6
         st.caption(f"Preview: {int(footprint.sum()):,} nodes, about {area:.2f} km² by node count; "
-                   "tab **4.0 Volumes** measures areas on contoured polygons.")
+                   "tab **5 Volumes** measures areas on contoured polygons.")
 
     unaccepted = [e for e in passed if e.type not in accept]
     with st.form("confirm_closure", border=False):
@@ -192,7 +195,7 @@ def render() -> None:
               if proj.objects[u].domain == "depth"]
     if not depths:
         st.info("Closure analysis needs a depth surface. A time surface is converted on tab "
-                "**2.0 Prepare**.", icon=":material/info:")
+                "**2 Surfaces** (Depth conversion).", icon=":material/info:")
         _confirmed_section()
         return
     with st.container(horizontal=True, vertical_alignment="bottom"):

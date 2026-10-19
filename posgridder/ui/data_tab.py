@@ -1,4 +1,4 @@
-"""Tab 1.0 Data: the active layer on a map, its geometry, statistics, lineage and export."""
+"""The map view of tab 2 Surfaces: the active layer on a map, its geometry, statistics, lineage and export."""
 from __future__ import annotations
 
 import pandas as pd
@@ -47,8 +47,12 @@ def render() -> None:
         colorscale, reverse = scale_picker("data_map")
         hist = st.toggle("Histogram", value=True, key="data_map_hist",
                          help="Map area in each value interval, beside the colour bar.")
+        contours = st.toggle("Contours", value=surface.domain in ("depth", "time"),
+                             key=f"data_map_contours_{surface.domain}",
+                             help="Contour lines over the map, at a round interval chosen from "
+                                  "the relief; every fifth thicker and labelled.")
     st.plotly_chart(surface_figure(surface, colorscale=colorscale, reverse=reverse,
-                                   histogram=hist),
+                                   histogram=hist, contours=contours),
                     key="surface_map")
 
     left, right = st.columns(2)

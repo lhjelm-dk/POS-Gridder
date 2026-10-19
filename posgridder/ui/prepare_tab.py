@@ -1,4 +1,4 @@
-"""Tab 2.0 Prepare: depth conversion, arithmetic and resampling.
+"""The tools of tab 2 Surfaces: depth conversion, arithmetic and resampling.
 
 Each tool makes a new layer through a recorded operation. The single-surface tools (scale,
 offset, clip, smooth) can instead replace their input as a new version of the same layer; the
@@ -168,13 +168,11 @@ def _resample() -> None:
              name.strip() or f"{src} resampled")
 
 
-def render() -> None:
-    tool = st.segmented_control("Tool", TOOLS, default=TOOLS[0], key="prepare_tool",
-                                label_visibility="collapsed") or TOOLS[0]
-    with st.container(border=True):
-        if tool == "Depth conversion":
-            _depth_conversion()
-        elif tool == "Arithmetic":
-            _arithmetic()
-        elif tool == "Resample":
-            _resample()
+def render_tool(tool: str) -> None:
+    """One tool, as chosen on tab 2 Surfaces."""
+    if tool == "Depth conversion":
+        _depth_conversion()
+    elif tool == "Arithmetic":
+        _arithmetic()
+    elif tool == "Resample":
+        _resample()

@@ -1,4 +1,4 @@
-"""Tab 4.0 Volumes: area–depth and GRV for a confirmed closure, outlines, and exports."""
+"""Tab 5 Volumes: area–depth and GRV for a confirmed closure, outlines, and exports."""
 from __future__ import annotations
 
 import pandas as pd
@@ -22,7 +22,7 @@ def _calculate_form() -> None:
     proj = project()
     closures = _names("closure")
     if not closures:
-        st.info("Volumes are computed on a confirmed closure (tab **3.0 Closure**).",
+        st.info("Volumes are computed on a confirmed closure (tab **4 Closure**).",
                 icon=":material/info:")
         return
     geometry = st.segmented_control("Geometry", list(GEOMETRIES), format_func=GEOMETRIES.get,

@@ -68,6 +68,7 @@ def test_copy_rename_delete():
 
 def test_depth_conversion_through_the_form():
     at = _app(_project())
+    at.segmented_control(key="surface_view").set_value("Depth conversion").run()
     _button(at, "Convert").click().run()
     assert not at.exception
     assert _names(at)[-1] == "twt depth"
@@ -77,7 +78,7 @@ def test_depth_conversion_through_the_form():
 
 def test_refused_arithmetic_is_reported():
     at = _app(_project())
-    at.segmented_control(key="prepare_tool").set_value("Arithmetic").run()
+    at.segmented_control(key="surface_view").set_value("Arithmetic").run()
     at.segmented_control(key="ar_op").set_value("add").run()
     selects = {s.label: s for s in at.selectbox}
     selects["A"].set_value("top")
@@ -152,7 +153,6 @@ def test_hcwc_and_pos_workflow():
     proj = at.session_state["project"]
     assert len(proj.current("hcwc")) == 1
 
-    at.segmented_control(key="pos_section").set_value("POS map").run()
     next(r for r in at.radio if r.label == "Event").set_value("a")
     _button(at, "Map POS").click().run()
     assert not at.exception, at.exception
@@ -160,7 +160,7 @@ def test_hcwc_and_pos_workflow():
     assert m.summary["pos_at_crest"] == pytest.approx(0.35 * 0.8)
     assert any(d.label == "POS grid (ZMAP+)" for d in at.get("download_button"))
 
-    at.segmented_control(key="pos_section").set_value("Area and GRV by percentile").run()
+    at.segmented_control(key="results_section").set_value("Area and GRV by percentile").run()
     _button(at, "Evaluate").click().run()
     assert not at.exception, at.exception
     (pv,) = [proj.objects[u] for u in proj.current("pctvol")]
@@ -177,10 +177,12 @@ def test_contour_workflow():
     (cs_uid,) = proj.current("contours")
     at.session_state["contour_selection"] = {cs_uid: [0, 1]}
     at.run()
+    assert at.segmented_control(key="contour_step").value == "Edit"   # straight to editing
     _button(at, "Delete selected").click().run()
     assert not at.exception, at.exception
     (new_uid,) = proj.current("contours")
     assert new_uid != cs_uid and proj.objects[new_uid].deleted[:2].all()
+    at.segmented_control(key="contour_step").set_value("Make surface").run()
     _button(at, "Make surface").click().run()
     assert not at.exception, at.exception
     made = proj.objects[proj.current("surface")[-1]]
@@ -203,3 +205,63 @@ def test_scale_pickers_on_every_map():
     at.segmented_control(key="contour_lines").set_value("Black").run()
     at.toggle(key="closure_map_reverse").set_value(True).run()
     assert not at.exception, at.exception
+
+
+
+def test_autosave_reopen_and_rotation(tmp_path):
+    """Every change is autosaved; a new session keeps the last one and can reopen it."""
+    from posgridder.io import autosave
+
+    at = _app()
+    _button(at, "Load example project").click().run()
+    assert not at.exception, at.exception
+    saves = autosave.available()
+    assert [s["index"] for s in saves] == [0]
+    first = autosave.load(0)
+    assert len(first.current("surface")) == 1
+
+    # A second session: its first change moves the first session's file aside.
+    at2 = _app()
+    _button(at2, "Load example project").click().run()
+    _button(at2, "Load example project").click().run()
+    assert [s["index"] for s in autosave.available()] == [0, 1]
+    assert len(autosave.load(1).current("surface")) == 1
+    assert len(autosave.load(0).current("surface")) == 2
+
+    # A third session reopens the latest without writing anything new.
+    at3 = _app()
+    _button(at3, "Reopen last project").click().run()
+    assert not at3.exception, at3.exception
+    assert len(at3.session_state["project"].current("surface")) == 2
+    assert [s["index"] for s in autosave.available()] == [0, 1]
+
+
+def test_autosave_off(monkeypatch):
+    from posgridder.io import autosave
+
+    monkeypatch.setenv("POSGRIDDER_AUTOSAVE", "off")
+    at = _app()
+    _button(at, "Load example project").click().run()
+    assert not at.exception
+    assert autosave.available() == []
+    assert any("Autosave is off" in c.value for c in at.caption)
+
+
+def test_pos_map_on_structure_contours():
+    """The result map draws the depth contours, the spill contour and the crest over POS."""
+    p = Project()
+    from tests.test_pos import dome, table_dist
+    top, closure = dome(p)
+    dist = table_dist(p, 2100, 2200, p_g=0.3, h_min=50.0, apex=2000.0)
+    from posgridder.core.operations import apply
+    apply(p, "pos_map", [closure.uid, top.uid, dist.uid],
+          {"roles": ["closure", "top", "hcwc"], "event": "b"}, name="m")
+    at = _app(p)
+    assert not at.exception, at.exception
+    from posgridder.plotting.maps import pos_figure
+    m = p.objects[p.current("posmap")[0]]
+    fig = pos_figure(m, structure=top, closure=closure)
+    names = [t.name for t in fig.data]
+    assert any(n and n.startswith("Spill") for n in names)
+    assert any(n and n.startswith("Crest") for n in names)
+    assert sum(1 for t in fig.data if t.type == "contour") >= 3

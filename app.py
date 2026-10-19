@@ -1,20 +1,23 @@
 """POS-Gridder — Streamlit shell.
 
-The sidebar holds the project's layers; each tab is a module in ``posgridder/ui``. Tabs carry
-the numbers they have in ``docs/PLAN.md`` §6.4.
+The sidebar holds the project's surfaces; each tab is a module in ``posgridder/ui``. The tabs
+follow the workflow: start or open a project, prepare the structure (surfaces, or contours),
+interpret the closure, measure it, bring in the contacts, and conclude with POS and the volumes
+by percentile.
 """
 from __future__ import annotations
 
 import streamlit as st
 
-from posgridder.ui import (closure_tab, contours_tab, data_tab, pos_tab, prepare_tab,
-                           project_tab, sidebar, volumes_tab)
-from posgridder.ui.state import show_notices
+from posgridder.io import autosave
+from posgridder.ui import (closure_tab, contours_tab, pos_tab, sidebar, start_tab, surfaces_tab,
+                           volumes_tab)
+from posgridder.ui.state import project, show_notices
 
 st.set_page_config(page_title="POS-Gridder", page_icon=":material/layers:", layout="wide")
 
 st.title("POS-Gridder")
-st.caption("*by Lars Hjelm* · Surfaces, contours and gridded chance of success")
+st.caption("*by Lars Hjelm* · Surfaces, contours and spatial chance of success")
 
 sidebar.render()
 # Always one container here, empty or not: an element that comes and goes above the tabs would
@@ -22,20 +25,32 @@ sidebar.render()
 with st.container():
     show_notices()
 
-data, prepare, closure, volumes, hcwc, contours, project = st.tabs(
-    ["1.0 Data", "2.0 Prepare", "3.0 Closure", "4.0 Volumes", "5.0 HCWC & POS", "6.0 Contours",
-     "7.0 Project"])
-with data:
-    data_tab.render()
-with prepare:
-    prepare_tab.render()
+start, surfaces, contours, closure, volumes, contacts, results = st.tabs(
+    ["1 Start", "2 Surfaces", "3 Contours", "4 Closure", "5 Volumes", "6 Contacts",
+     "7 POS & results"])
+with start:
+    start_tab.render()
+with surfaces:
+    surfaces_tab.render()
+with contours:
+    contours_tab.render()
 with closure:
     closure_tab.render()
 with volumes:
     volumes_tab.render()
-with hcwc:
-    pos_tab.render()
-with contours:
-    contours_tab.render()
-with project:
-    project_tab.render()
+with contacts:
+    pos_tab.render_contacts()
+with results:
+    pos_tab.render_results()
+
+# Autosave after the run, once whatever this run changed is in the project.
+# The first write of a session moves the previous session's file aside (see io/autosave.py).
+try:
+    sig, written = autosave.save_if_changed(
+        project(), st.session_state.get("_autosave_sig"),
+        first_in_session=not st.session_state.get("_autosave_written", False))
+    st.session_state["_autosave_sig"] = sig
+    if written:
+        st.session_state["_autosave_written"] = True
+except OSError as exc:
+    st.toast(f"Autosave failed: {exc}", icon=":material/warning:")

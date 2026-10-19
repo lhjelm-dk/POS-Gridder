@@ -252,3 +252,23 @@ def test_pos_figure_scales_and_histogram(project, scale):
     cell = top.xinc * top.yinc / 1e6
     assert sum(bars[0].x) == pytest.approx((m.category == 1).sum() * cell)
     assert pos_figure(m, scale=scale, histogram=False).data[-1].type == "heatmap"
+
+
+
+def test_spill_line_is_a_depth_contour(project):
+    """The drawn spill outline lies on the spill depth, not on the node-mask edge."""
+    import contourpy
+
+    from posgridder.plotting.maps import spill_field
+
+    top, closure = dome(project)
+    z = spill_field(top, closure.footprint, closure.spill_depth)
+    gen = contourpy.contour_generator(top.x, top.y, z)
+    lines = gen.lines(closure.spill_depth)
+    assert lines
+    longest = max(lines, key=len)
+    # On a paraboloid the spill contour is a circle of radius sqrt((spill - crest) / a).
+    r = np.hypot(longest[:, 0], longest[:, 1])
+    expected = np.sqrt((closure.spill_depth - closure.crest_depth) / A_PAR)
+    inner = r < 0.97 * L                          # away from where it meets the grid edge
+    np.testing.assert_allclose(r[inner], expected, rtol=0.01)
