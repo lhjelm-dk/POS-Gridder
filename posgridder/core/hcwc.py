@@ -122,24 +122,62 @@ def parse_csv(data: bytes) -> tuple[np.ndarray, np.ndarray, str]:
     return p, d, str(dcol)
 
 
-def parse_pasted(text: str) -> tuple[np.ndarray, np.ndarray]:
-    """Two columns pasted from a spreadsheet: percentile and depth, any of tab, comma, space."""
+def split_row(line: str) -> list[str]:
+    """One pasted row as cells, accepting decimal commas.
+
+    Tab, semicolon or space separate the columns (a spreadsheet pastes with tabs), and a comma
+    inside a cell is then a decimal comma: ``1915,05409<TAB>98``. A row with none of those and
+    commas only is comma-separated with decimal points: ``100,2126.7``.
+    """
+    line = line.replace("%", "").strip()
+    if re.search(r"[\t; ]", line):
+        cells = re.split(r"[\t; ]+", line)
+        return [c.replace(",", ".") for c in cells if c]
+    return [c for c in line.split(",") if c]
+
+
+def parse_rows(text: str, columns: int = 2) -> np.ndarray:
+    """Numeric rows of at least ``columns`` cells; header lines before the first row are skipped."""
     rows = []
-    for n, line in enumerate(text.splitlines(), 1):
-        line = line.split("#")[0].strip()
+    for n, raw in enumerate(text.splitlines(), 1):
+        line = raw.split("#")[0].strip()
         if not line:
             continue
-        parts = re.split(r"[\t,; ]+", line)
+        cells = split_row(line)
         try:
-            rows.append((float(parts[0]), float(parts[1])))
-        except (IndexError, ValueError):
+            rows.append([float(c) for c in cells[:columns]])
+            if len(rows[-1]) < columns:
+                raise ValueError
+        except ValueError:
+            if rows and len(rows[-1]) < columns:
+                rows.pop()
             if not rows:
                 continue                                # a header line
-            raise TableError(f"line {n} is not a percentile and a depth: {line!r}") from None
+            raise TableError(f"line {n} does not hold {columns} numbers: {raw.strip()!r}") \
+                from None
     if not rows:
         raise TableError("no rows found")
-    arr = np.array(rows)
-    return arr[:, 0], arr[:, 1]
+    return np.array(rows)
+
+
+def looks_like_percentiles(values: np.ndarray) -> bool:
+    """A column running from 100 down to 0 (or up from 0 to 100) in steps: percentiles."""
+    v = np.asarray(values, dtype=float)
+    return (v.size >= 3 and v.min() == 0 and v.max() == 100
+            and (bool((np.diff(v) < 0).all()) or bool((np.diff(v) > 0).all())))
+
+
+def parse_pasted(text: str) -> tuple[np.ndarray, np.ndarray]:
+    """Percentile and depth pasted from a spreadsheet, in either column order.
+
+    The percentile column is the one running between 100 and 0; the other is depth. Decimal
+    commas are read as such (see :func:`split_row`).
+    """
+    arr = parse_rows(text, 2)
+    first, second = arr[:, 0], arr[:, 1]
+    if looks_like_percentiles(second) and not looks_like_percentiles(first):
+        return second, first
+    return first, second
 
 
 def basis_from_filename(filename: str) -> str | None:

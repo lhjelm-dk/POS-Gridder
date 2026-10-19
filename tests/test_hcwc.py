@@ -141,3 +141,32 @@ def test_builder_spill_is_compared(project):
     m = apply(project, "pos_map", [closure.uid, top.uid, dist.uid],
               {"roles": ["closure", "top", "hcwc"], "event": "a"}, name="m")
     assert any("differs from the spill in the Builder prospect" in w for w in m.warnings)
+
+
+def test_paste_formats():
+    """Decimal commas (tab-separated, as Excel pastes them), either column order, CSV, header."""
+    expected_p, expected_d = uniform_table(1889.5, 2209.25)
+    depth_first = "Depth\tPercentile\n" + "\n".join(
+        f"{d:.4f}".replace(".", ",") + f"\t{p:g}" for p, d in zip(expected_p, expected_d))
+    p, d = parse_pasted(depth_first)
+    np.testing.assert_allclose(p, expected_p)
+    np.testing.assert_allclose(d, expected_d, atol=1e-4)
+    validate_table(p, d)
+
+    percentile_first = "\n".join(f"{p:g};{d:.4f}".replace(".", ",")
+                                 for p, d in zip(expected_p, expected_d))
+    p2, d2 = parse_pasted(percentile_first)
+    np.testing.assert_allclose(d2, expected_d, atol=1e-4)
+
+    csv = "Percentile,Depth\n" + "\n".join(f"{p:g},{d:.4f}" for p, d in zip(expected_p,
+                                                                           expected_d))
+    p3, d3 = parse_pasted(csv)
+    np.testing.assert_allclose(d3, expected_d, atol=1e-4)
+
+
+def test_percentile_table_is_recognised():
+    from posgridder.core.hcwc import looks_like_percentiles
+
+    assert looks_like_percentiles(P) and looks_like_percentiles(P[::-1])
+    assert not looks_like_percentiles(np.array([2300.0, 2400.0]))
+    assert not looks_like_percentiles(np.array([24.0, 13.0, 0.0]))

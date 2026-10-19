@@ -6,14 +6,14 @@ of a table are declared, P(G) and F(h_min) are typed or read from the Builder pr
 """
 from __future__ import annotations
 
-import re
 
 import numpy as np
 import pandas as pd
 import streamlit as st
 
 from posgridder.core.hcwc import (BASES, CONDITIONINGS, ERROR_BOUND, TAILS, PosCurve,
-                                  TableError, basis_from_filename, parse_pasted)
+                                  TableError, basis_from_filename, looks_like_percentiles,
+                                  parse_pasted, parse_rows)
 from posgridder.core.model import ProjectError
 from posgridder.core.operations import apply, recalculate
 from posgridder.core.pos import ANCHORINGS, EVENTS
@@ -102,8 +102,9 @@ def _import_forms() -> None:
 
     with st.expander("Paste or type a table", icon=":material/table_edit:"):
         with st.form("hcwc_paste", clear_on_submit=False, border=False):
-            text = st.text_area("Percentile and depth, one row per line (from a spreadsheet, or "
-                                "typed); P100 to P0", height=160,
+            text = st.text_area("Percentile and depth, one row per line, in either column order "
+                                "(pasted from a spreadsheet or typed); P100 to P0; decimal "
+                                "commas accepted", height=160,
                                 placeholder="100\t2126.7\n99\t2139.6\n…\n0\t2377.3")
             js = st.file_uploader("Prospect file (.hcwc.json), optional", type=["json"],
                                   key="paste_json")
@@ -214,7 +215,8 @@ def _curves_section() -> None:
     st.caption("A depth → POS table typed by the interpreter, such as a POS for each contour "
                "level. Between rows it is linear in depth; it is forced to 0 at the spill.")
     with st.form("pos_curve", clear_on_submit=False, border=False):
-        text = st.text_area("Depth (m) and POS (%), one row per line", height=120,
+        text = st.text_area("Depth (m) and POS (%), one row per line; decimal commas accepted",
+                            height=120,
                             placeholder="2300 24\n2400 13")
         meaning = st.radio("The values are", list(PosCurve.MEANINGS),
                            format_func=PosCurve.MEANINGS.get, index=None, horizontal=True)
@@ -225,10 +227,14 @@ def _curves_section() -> None:
             notify("error", "State whether the values include P(G) or are conditional on G.")
         else:
             try:
-                rows = [re.split(r"[\t,; ]+", ln.replace("%", "").strip())
-                        for ln in text.splitlines() if ln.strip()]
-                depths = [float(r[0]) for r in rows]
-                values = [float(r[1]) / 100.0 for r in rows]
+                arr = parse_rows(text, 2)
+                if len(arr) > 20 and (looks_like_percentiles(arr[:, 0])
+                                      or looks_like_percentiles(arr[:, 1])):
+                    raise ValueError("this is a contact percentile table (one column runs from "
+                                     "100 to 0); it belongs under Contact distribution → "
+                                     "Paste or type a table")
+                depths = arr[:, 0].tolist()
+                values = (arr[:, 1] / 100.0).tolist()
                 c = apply(proj, "pos_curve", [], {"depths": depths, "values": values,
                                                   "meaning": meaning}, name=name)
                 notify("success", f"Added ‘{c.name}’.")
