@@ -17,6 +17,7 @@ from posgridder.core.model import ProjectError
 from posgridder.core.operations import apply, recalculate
 from posgridder.plotting.maps import (SERIES, add_footprint, add_point, node_xy,
                                       surface_figure)
+from posgridder.ui.pickers import scale_picker
 from posgridder.ui.state import notify, project, uid_of
 
 
@@ -108,7 +109,9 @@ def _interpretation(surface, crest, connectivity: int, min_height: float) -> Non
         choice["accept"] = sorted(set(accept))
 
     footprint = footprint_at(surface, fill, spill) if spill > z_crest else None
-    fig = surface_figure(surface, height=560)
+    with st.container(horizontal=True, vertical_alignment="bottom"):
+        scale, reverse = scale_picker("closure_map")
+    fig = surface_figure(surface, height=560, colorscale=scale, reverse=reverse)
     if footprint is not None and footprint.any():
         add_footprint(fig, surface, footprint, name=f"Footprint at {spill:.1f} m")
     cx, cy = node_xy(surface, crest)

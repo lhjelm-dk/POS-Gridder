@@ -18,6 +18,7 @@ from posgridder.core.model import DOMAINS, ProjectError, Source
 from posgridder.core.operations import apply, recalculate
 from posgridder.io.vectors import Z_LEVEL, inspect, kind_of, to_geopackage
 from posgridder.plotting.maps import contour_figure
+from posgridder.ui.pickers import scale_picker
 from posgridder.ui.state import notify, project, select, uid_of
 
 
@@ -141,7 +142,18 @@ def _view(cs) -> None:
 
     background = proj.objects.get(cs.source_uid) if cs.source_uid else None
     selected = set(st.session_state.get("contour_selection", {}).get(cs.uid, []))
-    event = st.plotly_chart(contour_figure(cs, background=background, selected=selected),
+    scale, reverse, lines = "Viridis", False, "#ffffff"
+    if background is not None:
+        with st.container(horizontal=True, vertical_alignment="bottom"):
+            scale, reverse = scale_picker("contour_map")
+            pick = st.segmented_control("Lines", ["White", "Black"], default="White",
+                                        key="contour_lines",
+                                        help="Black reads better over the light end of the "
+                                             "single-hue scales.")
+            lines = "#1e1b16" if pick == "Black" else "#ffffff"
+    event = st.plotly_chart(contour_figure(cs, background=background, selected=selected,
+                                           colorscale=scale, reverse=reverse,
+                                           line_colour=lines),
                             key=f"contour_map_{cs.uid}", on_select="rerun",
                             selection_mode=("box", "lasso", "points"))
     picked = {int(p["customdata"]) for p in (event.selection.points if event else [])

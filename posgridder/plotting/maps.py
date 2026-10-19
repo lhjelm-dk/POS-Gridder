@@ -184,13 +184,16 @@ def pos_figure(m, *, height: int = 600, title: str | None = None, scale: str = "
 
 
 # --------------------------------------------------------------------------- contour sets
-def contour_figure(cs, *, background=None, selected=(), height: int = 620) -> go.Figure:
+def contour_figure(cs, *, background=None, selected=(), height: int = 620,
+                   colorscale: str = "Viridis", reverse: bool = False,
+                   line_colour: str = "#ffffff") -> go.Figure:
     """Active lines solid, deleted lines dashed grey, selected lines orange.
 
     Every vertex carries an invisible marker with its line number in ``customdata``, so a box or
     lasso selection returns line numbers (feasibility F2: line-only traces are not selectable).
     """
-    fig = surface_figure(background, height=height) if background is not None else go.Figure()
+    fig = (surface_figure(background, height=height, colorscale=colorscale, reverse=reverse)
+           if background is not None else go.Figure())
     selected = set(int(k) for k in selected)
 
     def trace(ids, name, color, dash, width):
@@ -213,7 +216,8 @@ def contour_figure(cs, *, background=None, selected=(), height: int = 620) -> go
     gone = [k for k in range(cs.n_lines) if cs.deleted[k] and k not in selected]
     sel = sorted(selected)
     if active:
-        trace(active, "Contours", "#ffffff" if background is not None else SERIES[0], "solid", 1.5)
+        trace(active, "Contours", line_colour if background is not None else SERIES[0],
+              "solid", 1.5)
     if gone:
         trace(gone, "Deleted", "#8c8a82", "dot", 1.2)
     if sel:

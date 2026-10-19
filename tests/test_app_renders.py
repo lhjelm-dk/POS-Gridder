@@ -186,3 +186,20 @@ def test_contour_workflow():
     made = proj.objects[proj.current("surface")[-1]]
     assert made.derivation.operation == "contours_to_surface"
     assert made.derivation.params["method"] == "tps"
+
+
+
+def test_scale_pickers_on_every_map():
+    """Data, closure and contour maps each offer the ten scales; the choice reaches the figure."""
+    at = _app()
+    _button(at, "Load example project").click().run()
+    _button(at, "Contour").click().run()
+    assert not at.exception, at.exception
+    for key in ("data_map_scale", "closure_map_scale", "contour_map_scale"):
+        box = at.selectbox(key=key)
+        assert len(box.options) == 10 and box.value == "Viridis"
+        box.set_value("Cividis").run()
+        assert not at.exception, at.exception
+    at.segmented_control(key="contour_lines").set_value("Black").run()
+    at.toggle(key="closure_map_reverse").set_value(True).run()
+    assert not at.exception, at.exception

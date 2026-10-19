@@ -7,7 +7,8 @@ import streamlit as st
 from posgridder.core.model import ProjectError
 from posgridder.core.operations import recalculate
 from posgridder.io.surfaces import FORMATS, write_surface
-from posgridder.plotting.maps import COLORSCALES, surface_figure
+from posgridder.plotting.maps import surface_figure
+from posgridder.ui.pickers import scale_picker
 from posgridder.ui.state import active, notify, project, select
 
 
@@ -43,9 +44,7 @@ def render() -> None:
         st.warning(w, icon=":material/warning:")
 
     with st.container(horizontal=True, vertical_alignment="bottom"):
-        colorscale = st.selectbox("Colour scale", COLORSCALES, key="map_colorscale", width=200,
-                                  index=COLORSCALES.index("Viridis"))
-        reverse = st.toggle("Reverse", key="map_reverse")
+        colorscale, reverse = scale_picker("data_map")
     st.plotly_chart(surface_figure(surface, colorscale=colorscale, reverse=reverse),
                     key="surface_map")
 
