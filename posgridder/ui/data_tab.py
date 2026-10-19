@@ -45,7 +45,10 @@ def render() -> None:
 
     with st.container(horizontal=True, vertical_alignment="bottom"):
         colorscale, reverse = scale_picker("data_map")
-    st.plotly_chart(surface_figure(surface, colorscale=colorscale, reverse=reverse),
+        hist = st.toggle("Histogram", value=True, key="data_map_hist",
+                         help="Map area in each value interval, beside the colour bar.")
+    st.plotly_chart(surface_figure(surface, colorscale=colorscale, reverse=reverse,
+                                   histogram=hist),
                     key="surface_map")
 
     left, right = st.columns(2)

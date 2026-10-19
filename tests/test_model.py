@@ -126,3 +126,15 @@ def test_surface_map_offers_the_pos_scales(dome):
                    for i in (0, -1))
     flipped = surface_figure(dome, colorscale="Blues", reverse=True).data[0].colorscale
     assert flipped[0][1] == dark and flipped[-1][1] == light
+
+
+
+def test_surface_histogram(dome):
+    from posgridder.plotting.maps import surface_figure
+
+    fig = surface_figure(dome, colorscale="Greens", histogram=True)
+    (bars,) = [t for t in fig.data if t.type == "bar"]
+    assert sum(bars.x) == pytest.approx(dome.n_valid * dome.xinc * dome.yinc / 1e6)
+    heat = [t for t in fig.data if t.type == "heatmap"][0]
+    assert (heat.zmin, heat.zmax) == pytest.approx((dome.stats()["min"], dome.stats()["max"]))
+    assert not [t for t in surface_figure(dome).data if t.type == "bar"]

@@ -8,29 +8,79 @@ import plotly.graph_objects as go
 from posgridder.core.model import Surface
 
 def surface_figure(surface: Surface, *, colorscale: str = "Viridis", reverse: bool = False,
-                   height: int = 650) -> go.Figure:
+                   height: int = 650, histogram: bool = False, bins: int = 30) -> go.Figure:
     """The surface as a heatmap in its own coordinates, nulls left blank.
 
-    ``colorscale`` is one of :data:`COLOUR_SCALES`, the same ten as the POS map.
+    ``colorscale`` is one of :data:`COLOUR_SCALES`, the same ten as the POS map. With
+    ``histogram`` a narrow panel beside the colour bar shows the map area in each value interval.
+    Overlays added later with ``fig.add_trace`` land on the map.
     """
     z = surface.values.filled(np.nan)
     unit = f" {surface.unit}" if surface.unit else ""
-    fig = go.Figure(go.Heatmap(
-        z=z, x=surface.x, y=surface.y,
-        colorscale=_scale(colorscale, reverse),
-        colorbar=dict(title=dict(text=f"{surface.domain}{(' (' + surface.unit + ')') if surface.unit else ''}")),
+    scale = _scale(colorscale, reverse)
+    stats = surface.stats()
+    vmin, vmax = stats["min"], stats["max"]
+    if not vmax > vmin:
+        vmax = vmin + 1e-6
+    fig = _map_frame(histogram)
+    fig.add_trace(go.Heatmap(
+        z=z, x=surface.x, y=surface.y, zmin=vmin, zmax=vmax, colorscale=scale,
+        colorbar=dict(title=dict(text=f"{surface.domain}{(' (' + surface.unit + ')') if surface.unit else ''}"),
+                      len=1.0, y=0.5, yanchor="middle", x=1.0, xanchor="left"),
         hovertemplate="X %{x:.0f}<br>Y %{y:.0f}<br>%{z:.2f}" + unit + "<extra></extra>",
-    ))
+    ), **_map_loc(histogram))
+    if histogram:
+        _value_histogram(fig, surface.values.compressed(), vmin, vmax, scale,
+                         surface.xinc * surface.yinc / 1e6, bins, "%{customdata[0]:.1f}–"
+                         "%{customdata[1]:.1f}" + unit, ".0f")
+    _map_layout(fig, histogram, height, surface.name)
+    return fig
+
+
+def _map_frame(histogram: bool) -> go.Figure:
+    if not histogram:
+        return go.Figure()
+    from plotly.subplots import make_subplots
+
+    return make_subplots(rows=1, cols=2, column_widths=[0.84, 0.16], horizontal_spacing=0.03)
+
+
+def _map_loc(histogram: bool) -> dict:
+    return dict(row=1, col=1) if histogram else {}
+
+
+def _value_histogram(fig, values, vmin, vmax, colorscale, cell_km2, bins, range_fmt, tickformat):
+    """Map area per value interval, beside the colour bar, on the colour bar's range."""
+    import plotly.colors as pc
+
+    edges = np.linspace(vmin, vmax, bins + 1)
+    counts, _ = np.histogram(values, bins=edges)
+    centres = 0.5 * (edges[1:] + edges[:-1])
+    colours = pc.sample_colorscale(colorscale, list((centres - vmin) / (vmax - vmin)))
+    fig.add_trace(go.Bar(
+        x=counts * cell_km2, y=centres, orientation="h", width=(edges[1] - edges[0]) * 0.92,
+        marker=dict(color=colours, line=dict(width=0)), showlegend=False, name="Area",
+        customdata=np.column_stack([edges[:-1], edges[1:]]),
+        hovertemplate=range_fmt + "<br>%{x:.2f} km²<extra></extra>"), row=1, col=2)
+    fig.update_xaxes(title_text="Area (km²)", rangemode="tozero", gridcolor="#ebe8df",
+                     row=1, col=2)
+    # Same range as the colour bar, so a bar sits beside its own colour.
+    fig.update_yaxes(range=[vmin, vmax], tickformat=tickformat, showticklabels=False,
+                     gridcolor="#ebe8df", row=1, col=2)
+
+
+def _map_layout(fig, histogram: bool, height: int, title: str) -> None:
+    loc = _map_loc(histogram)
     fig.update_layout(
-        height=height, margin=dict(l=10, r=10, t=30, b=10),
-        xaxis=dict(title="X (m)", tickformat="d", showgrid=False),
-        # Equal scaling, so a 250 m cell is square on screen.
-        yaxis=dict(title="Y (m)", tickformat="d", showgrid=False, scaleanchor="x", scaleratio=1),
-        title=dict(text=surface.name, font=dict(size=14)),
+        height=height, margin=dict(l=10, r=10, t=30, b=10), title=dict(text=title,
+                                                                      font=dict(size=14)),
         legend=dict(x=0.01, y=0.99, xanchor="left", yanchor="top",
                     bgcolor="rgba(30,27,22,0.6)", font=dict(color="#ffffff")),
-    )
-    return fig
+        plot_bgcolor="#ffffff", bargap=0)
+    fig.update_xaxes(title_text="X (m)", tickformat="d", showgrid=False, **loc)
+    # Equal scaling, so a 250 m cell is square on screen.
+    fig.update_yaxes(title_text="Y (m)", tickformat="d", showgrid=False, scaleanchor="x",
+                     scaleratio=1, **loc)
 
 
 # --------------------------------------------------------------------------- overlays
@@ -121,17 +171,11 @@ def pos_figure(m, *, height: int = 600, title: str | None = None, scale: str = "
     With ``histogram`` a narrow panel beside the colour bar shows the trap area in each POS
     interval, its bars coloured from the same scale, so the colour bar reads as a distribution.
     """
-    import plotly.colors as pc
-    from plotly.subplots import make_subplots
-
     from posgridder.core.pos import CATEGORIES
 
     colorscale = _scale(scale, reverse)
-    if histogram:
-        fig = make_subplots(rows=1, cols=2, column_widths=[0.84, 0.16], horizontal_spacing=0.03)
-    else:
-        fig = go.Figure()
-    loc = dict(row=1, col=1) if histogram else {}
+    fig = _map_frame(histogram)
+    loc = _map_loc(histogram)
     for code, grey in CATEGORY_GREYS.items():
         sel = m.category == code
         if not sel.any():
@@ -153,33 +197,10 @@ def pos_figure(m, *, height: int = 600, title: str | None = None, scale: str = "
         colorbar=dict(title=dict(text="POS"), tickformat=".0%", len=1.0, y=0.5, yanchor="middle",
                       x=1.0, xanchor="left"),
         hovertemplate="X %{x:.0f}<br>Y %{y:.0f}<br>POS %{z:.1%}<extra></extra>"), **loc)
-
     if histogram:
-        edges = np.linspace(0.0, vmax, bins + 1)
-        counts, _ = np.histogram(pos, bins=edges)
-        area = counts * m.xinc * m.yinc / 1e6
-        centres = 0.5 * (edges[1:] + edges[:-1])
-        colours = pc.sample_colorscale(colorscale, list(centres / vmax))
-        fig.add_trace(go.Bar(
-            x=area, y=centres, orientation="h", width=(edges[1] - edges[0]) * 0.92,
-            marker=dict(color=colours, line=dict(width=0)), showlegend=False, name="Area",
-            customdata=np.column_stack([edges[:-1], edges[1:]]),
-            hovertemplate="POS %{customdata[0]:.1%}–%{customdata[1]:.1%}<br>"
-                          "%{x:.2f} km²<extra></extra>"), row=1, col=2)
-        fig.update_xaxes(title_text="Area (km²)", rangemode="tozero", gridcolor="#ebe8df",
-                         row=1, col=2)
-        # Same range as the colour bar, so a bar sits beside its own colour.
-        fig.update_yaxes(range=[0, vmax], tickformat=".0%", side="right", showticklabels=False,
-                         gridcolor="#ebe8df", row=1, col=2)
-    fig.update_layout(
-        height=height, margin=dict(l=10, r=10, t=30, b=10),
-        title=dict(text=title or m.name, font=dict(size=14)),
-        legend=dict(x=0.01, y=0.99, xanchor="left", yanchor="top",
-                    bgcolor="rgba(30,27,22,0.6)", font=dict(color="#ffffff")),
-        plot_bgcolor="#ffffff", bargap=0)
-    fig.update_xaxes(title_text="X (m)", tickformat="d", showgrid=False, **loc)
-    fig.update_yaxes(title_text="Y (m)", tickformat="d", showgrid=False, scaleanchor="x",
-                     scaleratio=1, **loc)
+        _value_histogram(fig, pos, 0.0, vmax, colorscale, m.xinc * m.yinc / 1e6, bins,
+                         "POS %{customdata[0]:.1%}–%{customdata[1]:.1%}", ".0%")
+    _map_layout(fig, histogram, height, title or m.name)
     return fig
 
 
