@@ -27,3 +27,6 @@ data/private/
 
 # Working conventions for the assistant: a note to one reader, not part of the repository.
 CLAUDE.md
+
+# Screenshots taken while using the app.
+screendumps/

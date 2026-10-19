@@ -1,4 +1,4 @@
-"""F5: a real HCWC Builder export, made by the Builder's own code, as a test fixture.
+"""A real HCWC Builder export, made by the Builder's own code, as a test fixture.
 
 Runs the limit set stored in the Builder's example file ``example_prospect_spill.hcwc.json``
 (its ``resolved`` block; h_min = 120 m, so F(h_min) < 1 and the conditioning is visible), with
@@ -9,7 +9,7 @@ the Builder's default trial count and seed, and writes:
 This is a one-off generator. POS-Gridder never imports the Builder; only the files are used.
 
 Run with an interpreter that has the Builder's requirements, from anywhere:
-    python feasibility/f5_builder_fixture.py
+    python scripts/make_builder_fixture.py
 """
 from __future__ import annotations
 

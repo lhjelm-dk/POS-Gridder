@@ -1,7 +1,8 @@
 # Feasibility phase — results
 
-*2026-10-09. Phase F of `docs/PLAN.md`. Scripts are in `feasibility/`; numbers below are their
-output on this machine (Windows 11, Python 3.12.3).*
+*2026-10-09. Phase F of `docs/PLAN.md`. The scripts were retired after this phase and remain in
+the git history (commit 1d59320, folder `feasibility/`); the F5 generator lives on as
+`scripts/make_builder_fixture.py`. Numbers below are their output on this machine (Windows 11, Python 3.12.3).*
 
 **Verdict:** every item is feasible. Two plan details change (F2 and F4), and the D9 and T5–T8
 tolerances are now grounded in measurements (F3). Phase 1 can start.
@@ -132,7 +133,7 @@ accurate here, at 0.16 m RMS.
 
 ## F5 — A real HCWC Builder export as a fixture
 
-**Method.** `feasibility/f5_builder_fixture.py` runs the Builder's own engine on the limit set
+**Method.** `scripts/make_builder_fixture.py` runs the Builder's own engine on the limit set
 stored in `HCWC builder/reference/defaults/example_prospect_spill.hcwc.json` (h_min = 120 m),
 with its default 10,000 trials and seed. It writes the tab 7.0 export exactly as shipped, an
 unconditioned table, and reference values to `tests/fixtures/hcwc_builder/`.
@@ -188,6 +189,7 @@ Low (spill-limited example)", and `min_column_input` (100) differs from `resolve
 ## Open items from this phase
 
 - **Manual check (1 minute):** single click and lasso on contour lines in the F2 prototype:
-  `streamlit run feasibility/f2_line_selection.py`. Box selection was confirmed again in the
-  real app in Phase 4 (tab 6.0: a box returned two lines, which were then deleted).
+  the prototype has been retired, so the check is now made on tab **3 Contours**, **Edit**. Box
+  selection was confirmed again in the real app in Phase 4 (a box returned two lines, which
+  were then deleted).
 - **Builder example-file inconsistency** (`resolved` vs `inputs`), to be fixed in HCWC Builder.

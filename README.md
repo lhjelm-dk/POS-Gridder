@@ -120,7 +120,7 @@ subset that CI runs on pull requests; a push to `main` runs everything.
 | `posgridder/io/` | file formats, project files, autosave, reports, the summary |
 | `posgridder/plotting/` | maps and charts |
 | `posgridder/ui/` | the sidebar and one module per tab |
-| `scripts/` | the gridding benchmark and the performance profile |
+| `scripts/` | the gridding benchmark, the performance profile and the HCWC Builder fixture generator |
 | `tests/` | the test suite |
 
 ## Companions

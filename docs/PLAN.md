@@ -1,6 +1,6 @@
 # POS-Gridder — Revised v1 plan (critical review of draft 3)
 
-*Draft 4, 2026-10-09; feasibility results folded in (see `docs/FEASIBILITY.md`). A critical review of draft 3 (archived as `docs/archive/PLAN_draft3.md`),
+*Draft 4, 2026-10-09; feasibility results folded in (see `docs/FEASIBILITY.md`). A critical review of draft 3 (in the git history as `docs/archive/PLAN_draft3.md`),
 with the user's decisions D1–D9 recorded in §0 and §9. No implementation has started from this
 plan.*
 
@@ -656,7 +656,7 @@ reproducibility tractable, without an undo system.
 3. Record the file hash and import parameters.
 4. Make `Surface` immutable (frozen); rename and copy become new versions.
 5. Remove xtgeo and IRAP (D8): move `io/xtgeo_bridge.py` and the IRAP entries to
-   `archive/` (moved, not deleted). Remove verde and pykrige from the requirements.
+   `archive/` (moved, not deleted; the folder was later retired and remains in the git history). Remove verde and pykrige from the requirements.
 6. Keep: the ZMAP+ reader/writer, its tests, CI and the layout.
 
 ### 6.4 UI (tabs)
