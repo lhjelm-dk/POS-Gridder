@@ -305,3 +305,16 @@ def test_project_tree_and_summary():
     _button(at, "Build the summary").click().run()
     assert not at.exception, at.exception
     assert any(d.label == "Download the summary (HTML)" for d in at.get("download_button"))
+
+
+
+def test_autosave_off_when_hosted(monkeypatch):
+    """On Streamlit Community Cloud (HOME=/home/appuser) autosave is off unless a folder is set."""
+    from posgridder.io import autosave
+
+    monkeypatch.delenv("POSGRIDDER_AUTOSAVE", raising=False)
+    monkeypatch.setenv("HOME", "/home/appuser")
+    assert autosave.hosted() and autosave.folder() is None
+    assert "hosted server" in autosave.off_reason()
+    monkeypatch.setenv("POSGRIDDER_AUTOSAVE", "/tmp/somewhere")
+    assert autosave.folder() is not None

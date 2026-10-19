@@ -58,7 +58,7 @@ def _start() -> None:
             _replace(Project(), "Started an empty project.")
             st.rerun()
     if autosave.folder() is None:
-        st.caption("Autosave is off (POSGRIDDER_AUTOSAVE=off).")
+        st.caption(autosave.off_reason())
     else:
         st.caption(f"Every change is saved to {autosave.folder()}. The last {autosave.KEEP} "
                    "sessions are kept.")

@@ -1,105 +1,133 @@
 # POS-Gridder
 
-Surfaces, contours and spatial chance of success for prospect evaluation. A Streamlit
-application for the HCWC/GRV/POS workflow: surface import, depth conversion and arithmetic,
-closure and spill interpretation, area–depth and GRV, contact distributions from HCWC Builder,
-POS mapped as a function of depth, and area/GRV across the contact percentiles. Every layer
-records how it was made and can be recomputed from the imported files.
+Surfaces, contours and spatial chance of success for prospect evaluation.
 
-**Status:** v1 complete, version 0.3.0 (all phases of the plan, plus the workflow changes in `docs/PLAN.md` §8b) in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
-[`docs/FEASIBILITY.md`](docs/FEASIBILITY.md)):
-- import with a declared domain and sign;
-- immutable layers with provenance, version history and stale flags;
-- depth conversion (constant velocity, velocity surface, V0 + kZ);
-- domain-checked arithmetic and explicit resampling;
-- project save/load with a replay check;
-- crest and spill candidates, a confirmed closure interpretation (priority-flood fill depth,
-  boundary types, explicit acceptance);
-- area–depth and GRV for top + base, top + constant thickness and top + thickness surface;
-- outline clipping;
-- HCWC Builder and SCOPE-HC area–depth export;
-- contact distributions from the HCWC Builder CSV (or pasted, typed and edited), with P(G),
-  h_min and the apex from the .hcwc.json;
-- POS maps for event (a), a column of at least h_min, and event (b), any column, read at the
-  fill depth, with every non-POS region labelled;
-- typed depth→POS curves;
-- area and GRV at each contact percentile;
-- JSON result reports;
-- contour sets made from a surface or imported (GeoPackage, GeoJSON, zipped Shapefile, ASCII);
-- line selection by box or lasso on the map or from a table, with delete and restore;
-- surfaces made from contours by thin-plate spline (the default, chosen by the benchmark in
-  `docs/BENCHMARK.md`) or linear TIN, as a new layer or a new version of the source surface;
-- outlines from closed contours, and GeoPackage export.
+POS-Gridder is a Streamlit app for one workflow:
+1. import a structure map;
+2. interpret its closure and spill;
+3. measure area–depth and gross rock volume;
+4. bring in the hydrocarbon–water contact distribution from HCWC Builder;
+5. map the chance of success (POS) on the structure;
+6. read area and GRV at every contact percentile.
 
-The tabs follow the workflow: **1 Start** (reopen the autosaved project, the example, open,
-save) → **2 Surfaces** → **3 Contours** → **4 Closure** → **5 Volumes** → **6 Contacts** →
-**7 POS & results**, where POS is shown on the structure contours. Every change is autosaved to
-`~/.pos-gridder/` (the last three sessions are kept; `POSGRIDDER_AUTOSAVE=off` switches it off).
+Every result records how it was made and can be recomputed from the imported files.
 
-A progress strip above the tabs shows which steps are done and names the next one; the sidebar
-lists everything the project holds, stale results marked. Tab 7 builds a one-page prospect
-summary (HTML, opens offline, prints to PDF) with the map, the numbers, every assumption and
-warning, and the source files' SHA-256.
+Version 0.3.0 · MIT licence · by Lars Hjelm
 
-The example project (tab 1 Start) makes a synthetic two-dome surface for trying the workflow.
-The documents that go with v1:
-- [`docs/WORKED_EXAMPLE.md`](docs/WORKED_EXAMPLE.md) — the workflow step by step on real data,
-  with the numbers to expect;
-- [`docs/SAFEGUARDS.md`](docs/SAFEGUARDS.md) — every known way to get a plausible but wrong
-  answer, what the app does about it, and the test;
-- [`docs/BENCHMARK.md`](docs/BENCHMARK.md) — why the thin-plate spline is the default for
-  contours → surface;
-- [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — timings on a 51,646-node grid.
+## What it does, tab by tab
 
-## Run
+| Tab | |
+|---|---|
+| **1 Start** | Reopen the last project (autosaved), load the example, open or save a project file; replay check and history under **Audit** |
+| **2 Surfaces** | Map with structure contours and an area histogram; depth conversion (constant velocity, velocity surface, V0 + kZ), domain-checked arithmetic, resampling |
+| **3 Contours** | Make contours from a surface or import them (GeoPackage, GeoJSON, zipped Shapefile, ASCII `x y z id`); select and delete lines on the map; make a surface from contours (thin-plate spline or linear TIN) |
+| **4 Closure** | Candidate crests and spills (model edge, data limit, interior null, saddle); the interpreter confirms one, accepting each boundary explicitly |
+| **5 Volumes** | Area–depth and GRV for top + base, top + constant thickness, top + thickness surface; outline clipping; HCWC Builder and SCOPE-HC area–depth export |
+| **6 Contacts** | Contact distributions from the HCWC Builder CSV and `.hcwc.json`, or pasted, typed and edited; typed depth → POS curves |
+| **7 POS & results** | POS on the structure contours, for a column of at least h_min or for any column; area and GRV by contact percentile; a one-page prospect summary (HTML, prints to PDF) |
+
+A progress strip above the tabs shows which steps are done and names the next one. The
+sidebar holds the surfaces and lists everything in the project, with stale results marked.
+
+## Quick start (local)
+
+Python 3.11 or newer:
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
 ```
 
-Tests:
+Open the app, go to **1 Start** and click **Load example project**: a synthetic two-dome
+surface for trying every step. [`docs/WORKED_EXAMPLE.md`](docs/WORKED_EXAMPLE.md) walks
+through a real grid with the numbers to expect.
+
+## Deploy on Streamlit Community Cloud
+
+1. Sign in at [share.streamlit.io](https://share.streamlit.io) with the GitHub account that holds
+   this repository, and give Community Cloud access to it.
+2. Create a new app from GitHub: repository `lhjelm-dk/POS-Gridder`, branch `main`, main file
+   `app.py`. For a private repository, check the app's sharing settings, so only the intended
+   viewers can open it.
+3. Under **Advanced settings** set **Python 3.12**. It cannot be changed after the app is
+   created.
+4. **Deploy.** The app installs from `requirements.txt`. Every package ships as a wheel,
+   GDAL included (through pyogrio), so no `packages.txt` is needed. The colours come from
+   `.streamlit/config.toml`.
+
+**Hosted, the app behaves differently in three ways:**
+- **Autosave is off by default.** One server serves every visitor, so a shared autosave folder
+  would hand one user's project to the next. Keep work with **Download project file** on
+  **1 Start**, and reopen it with **Open**.
+- **Uploaded data leaves your machine.** It goes to Streamlit's servers. For confidential
+  prospects, run the app locally.
+- **Memory is about 1 GB.** That is ample for grids like the 51,646-node GEUS example.
+  Making a surface from dense contours with the spline takes about 11 s there
+  ([`docs/PERFORMANCE.md`](docs/PERFORMANCE.md)).
+
+## Data and privacy
+
+- Imported files are never sent anywhere by the app.
+- When run locally, every change is autosaved to `~/.pos-gridder/`, and the last three
+  sessions are kept, so a restart loses nothing. To switch this off, set the environment
+  variable `POSGRIDDER_AUTOSAVE=off`; to use another folder, set it to a folder path.
+- A project file (`.posgrid.zip`) holds the imported files byte for byte, every version and
+  every derivation. The replay check recomputes everything from it.
+
+## File formats
+
+| | Read | Write |
+|---|---|---|
+| Grids | ZMAP+ ASCII (own reader; honours the header's null value) | ZMAP+ ASCII |
+| Contour lines | GeoPackage, GeoJSON, zipped Shapefile, ASCII `x y z id` | GeoPackage |
+| Contacts | HCWC Builder percentile CSV (`Percentile`, `Value` or `Depth(m)`), `.hcwc.json`; pasted tables | — |
+| Area–depth | HCWC Builder CSV | HCWC Builder CSV, SCOPE-HC CSV |
+| Results | — | POS grid (ZMAP+), JSON reports, prospect summary (HTML) |
+
+## Conventions
+
+- Depth in m TVDSS, positive down. Area in km². GRV in 10⁶ m³.
+- Contact percentiles follow HCWC Builder's exceedance convention: P100 is the shallowest
+  contact.
+- Grids are regular and unrotated. Surfaces in different stated coordinate systems are not
+  combined; there is no reprojection.
+
+## Documentation
+
+- [`docs/WORKED_EXAMPLE.md`](docs/WORKED_EXAMPLE.md) — the workflow on real data, step by step.
+- [`docs/SAFEGUARDS.md`](docs/SAFEGUARDS.md) — every known way to get a plausible but wrong
+  answer, what the app does about it, and the test that holds it.
+- [`docs/BENCHMARK.md`](docs/BENCHMARK.md) — why the thin-plate spline is the default for
+  contours → surface.
+- [`docs/PERFORMANCE.md`](docs/PERFORMANCE.md) — timings on a 51,646-node grid.
+- [`docs/PLAN.md`](docs/PLAN.md) and [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md) — the
+  development plan, the decisions behind it, and the feasibility study.
+
+## Development
 
 ```bash
 pip install -r requirements-dev.txt
 python -m pytest -q
 ```
 
-The `render` marker selects the tests that render the whole app; `-m "not render"` is the quick
-subset CI runs on pull requests.
+Tests that render the whole app carry the `render` marker. `-m "not render"` is the quick
+subset that CI runs on pull requests; a push to `main` runs everything.
 
-## Surface formats
-
-| Format | Read | Write | Through |
-|---|---|---|---|
-| ZMAP+ ASCII | ✓ | ✓ | own reader (honours the header's null value) |
-
-v1 keeps to ZMAP+ for grids (decision D8). The IRAP bridge from Phase 0 is in `archive/`.
-Contour lines: GeoPackage, GeoJSON, zipped Shapefile and ASCII `x y z id` in; GeoPackage out.
-
-## Conventions
-
-- Grids are regular and unrotated; values are `(nrow, ncol)` with row 0 in the south.
-- Depth in m TVDSS, positive down; area in km²; GRV in 10⁶ m³.
-- Exceedance percentiles as in HCWC Builder: P100 is the shallowest contact.
-
-## Layout
-
-| path | what |
+| Path | What |
 |---|---|
-| `app.py` | the Streamlit shell: sidebar layer list and the tabs |
+| `app.py` | the Streamlit shell: sidebar, progress strip, tabs |
 | `posgridder/core/` | the model and the calculations; no Streamlit import |
-| `posgridder/io/` | file formats and, later, the exchange files for the companion apps |
-| `posgridder/plotting/` | map figures |
+| `posgridder/io/` | file formats, project files, autosave, reports, the summary |
+| `posgridder/plotting/` | maps and charts |
 | `posgridder/ui/` | the sidebar and one module per tab |
-| `docs/` | the development plan and the feasibility results |
-| `feasibility/` | the feasibility scripts and the line-selection prototype |
-| `archive/` | code moved out of the package (the xtgeo/IRAP bridge) |
-| `tests/` | the suite |
+| `scripts/` | the gridding benchmark and the performance profile |
+| `tests/` | the test suite |
 
 ## Companions
 
-Standalone for now. Designed to exchange files with HCWC Builder (contact percentiles in,
-area–depth out), WellVolPOS and SCOPE-HC, and to merge with them later.
+POS-Gridder stands alone. It exchanges files with HCWC Builder (contact percentiles in,
+area–depth out), WellVolPOS and SCOPE-HC.
 
-MIT licence.
+## Licence
+
+MIT — see [`LICENSE`](LICENSE).

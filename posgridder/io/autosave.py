@@ -23,10 +23,32 @@ ENV = "POSGRIDDER_AUTOSAVE"
 KEEP = 3
 
 
-def folder() -> Path | None:
+def hosted() -> bool:
+    """True on Streamlit Community Cloud, which runs every app from ``/mount/src``.
+
+    There one container serves every visitor, so a shared autosave folder would hand one user's
+    project to the next. Autosave is therefore off on a hosted server unless the environment
+    variable names a folder explicitly.
+    """
+    return (str(Path(__file__).resolve()).startswith("/mount/src")
+            or os.environ.get("HOME") == "/home/appuser")
+
+
+def off_reason() -> str | None:
+    """Why autosave is off, in words for the Start tab; None when it is on."""
     value = os.environ.get(ENV, "").strip()
     if value.lower() == "off":
+        return f"Autosave is off ({ENV}=off)."
+    if not value and hosted():
+        return ("Autosave is off on a hosted server, where one folder would be shared by every "
+                "visitor. Download the project file on this tab to keep the work.")
+    return None
+
+
+def folder() -> Path | None:
+    if off_reason() is not None:
         return None
+    value = os.environ.get(ENV, "").strip()
     return Path(value) if value else Path.home() / ".pos-gridder"
 
 
