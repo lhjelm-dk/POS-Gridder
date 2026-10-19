@@ -1,6 +1,6 @@
 # Safeguards register
 
-*2026-10-19, POS-Gridder 0.2.0.* Each finding of the plan review (`docs/PLAN.md` §2), what the
+*2026-10-19, POS-Gridder 0.3.0.* Each finding of the plan review (`docs/PLAN.md` §2), what the
 app does about it, and the test that holds it there. A result that runs but applies the wrong
 convention is the failure this register exists to prevent.
 
@@ -27,6 +27,10 @@ convention is the failure this register exists to prevent.
 | C20 | Different coordinate systems combined | Refused for surfaces, contours on a template, and outlines on volumes and POS. A missing CRS gives a warning | `test_operations.py::test_different_crs_refused`, `test_contours.py::test_crs_mismatch_refused_for_contours_and_outlines` |
 | — | Project file damaged or edited | Every source and object is hash-checked on load | `test_project_file.py::test_tampered_*` |
 | — | Older project files after an upgrade | Hashes stay compatible. The replay check names the version that made each object | `test_project_file.py::test_project_file_from_version_0_1_loads` |
+| — | Work lost on a restart; one session's autosave overwriting another's | Every change autosaved. A session's first write moves the previous session aside, and the last three are kept. Writes go to a temporary file first, then replace the old one | `test_app_renders.py::test_autosave_reopen_and_rotation`, `::test_autosave_off` |
+| — | Default h_min = 0 / F = 1 hiding a conditioned export | Defaults recorded as defaults. A warning appears when the prospect file sets a larger h_min | `test_hcwc.py::test_default_h_min_and_f` |
+| — | Decimal commas or swapped columns misread as data | Pasted rows are parsed with decimal commas; the percentile column is detected; a percentile table pasted as a POS curve is refused with where it belongs | `test_hcwc.py::test_paste_formats`, `::test_percentile_table_is_recognised` |
+| — | Spill outline drawn on the node edge, not at the spill depth | Drawn as the depth contour at the spill within the footprint | `test_pos.py::test_spill_line_is_a_depth_contour` |
 
 Not covered in v1, by decision: structural uncertainty, faults as barriers, well ties,
 reprojection, grid formats other than ZMAP+ (plan §4.2).

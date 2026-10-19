@@ -7,6 +7,7 @@ into docs/PERFORMANCE.md by hand.
 """
 from __future__ import annotations
 
+import os
 import sys
 import time
 import warnings
@@ -16,6 +17,8 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
+# The app run below must not write into the user's autosave folder.
+os.environ["POSGRIDDER_AUTOSAVE"] = "off"
 warnings.filterwarnings("ignore")
 
 from posgridder.core.closure import crest_candidates  # noqa: E402

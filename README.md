@@ -6,7 +6,7 @@ closure and spill interpretation, area–depth and GRV, contact distributions fr
 POS mapped as a function of depth, and area/GRV across the contact percentiles. Every layer
 records how it was made and can be recomputed from the imported files.
 
-**Status:** v1 complete (0.2.0), all phases of the plan in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
+**Status:** v1 complete, version 0.3.0 (all phases of the plan, plus the workflow changes in `docs/PLAN.md` §8b) in [`docs/PLAN.md`](docs/PLAN.md) (feasibility results in
 [`docs/FEASIBILITY.md`](docs/FEASIBILITY.md)):
 - import with a declared domain and sign;
 - immutable layers with provenance, version history and stale flags;

@@ -802,6 +802,34 @@ Still outstanding is an **external comparison on one of the user's own prospects
 area–depth table or GRV from GeoX, Petrel or a spreadsheet (§7.4). It needs data that is not
 in the repository.
 
+## 8b. After v1: the 0.3.0 changes (2026-10-19)
+
+Changes made at the user's request after the first real use. The calculations are unchanged;
+the workflow, input and presentation changed.
+
+- **Input:**
+  - Pasted tables take decimal commas and either column order.
+  - Contact forms default to h_min = 0 m with F(h_min) = 1. These are recorded as defaults,
+    with a warning when a `.hcwc.json` sets a larger h_min.
+- **Maps:**
+  - Ten colour scales on every map (rainbow scales left out) and an area histogram beside the
+    colour bar.
+  - Structure contours: a round interval from the relief, every fifth labelled.
+  - Spill outlines are drawn as the true depth contour.
+- **Workflow:**
+  - Tabs in workflow order: 1 Start, 2 Surfaces (map + tools), 3 Contours (make or import →
+    edit → make surface), 4 Closure, 5 Volumes, 6 Contacts, 7 POS & results.
+  - POS is shown on the structure contours, with the spill contour and the crest.
+- **Guidance:**
+  - A progress strip above the tabs, with the next step named and stale results counted.
+  - Project contents in the sidebar.
+- **Keeping work:**
+  - Autosave to `~/.pos-gridder/`, the last three sessions kept (`POSGRIDDER_AUTOSAVE`, `off`
+    disables).
+  - This narrows the standing constraint that imported data are never written to disk: they are
+    written to that folder only.
+- **Result:** a one-page prospect summary (HTML, offline, printable) on tab 7.
+
 ## 9. Decisions and remaining open items
 
 D1–D9 are decided (§0). What remains:
